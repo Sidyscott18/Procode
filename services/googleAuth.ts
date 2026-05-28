@@ -1,8 +1,6 @@
-import * as WebBrowser
-from "expo-web-browser";
-
-import * as Google
-from "expo-auth-session/providers/google";
+import {
+  GoogleSignin,
+} from "@react-native-google-signin/google-signin";
 
 import {
   GoogleAuthProvider,
@@ -13,77 +11,44 @@ import {
   auth,
 } from "./firebase";
 
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId:
+    "868812370783-27r7aica1avkearl8r3pg5nn9ck6ck2t.apps.googleusercontent.com",
+});
 
-export const useGoogleAuth =
-  () => {
+export const handleGoogleSignIn =
+  async () => {
 
-    const [
-      request,
-      response,
-      promptAsync,
-    ] = Google.useAuthRequest({
+    try {
 
-      webClientId:
-        "868812370783-27r7aica1avkearl8r3pg5nn9ck6ck2t.apps.googleusercontent.com",
+      await GoogleSignin.hasPlayServices();
 
-      androidClientId:
-        "868812370783-ldjn1m4hkuq3m5ihqhivnf0cvtd4bt0d.apps.googleusercontent.com"
-    });
+      const userInfo =
+        await GoogleSignin.signIn();
 
-    const handleGoogleSignIn =
-      async () => {
+      const idToken =
+        userInfo.data?.idToken;
 
-        try {
+      if (!idToken)
+        return;
 
-          const result =
-            await promptAsync();
+      const credential =
 
-          if (
-            result.type !== "success"
-          ) {
+        GoogleAuthProvider.credential(
+          idToken
+        );
 
-            console.log(result);
+      await signInWithCredential(
+        auth,
+        credential
+      );
 
-            return;
-          }
+      console.log(
+        "Google Login Success"
+      );
 
-          const idToken =
-            result.authentication?.idToken;
+    } catch (error) {
 
-          if (!idToken) {
-
-            console.log(
-              "No ID token"
-            );
-
-            return;
-          }
-
-          const credential =
-
-            GoogleAuthProvider.credential(
-              idToken
-            );
-
-          await signInWithCredential(
-            auth,
-            credential
-          );
-
-          console.log(
-            "Google Login Success"
-          );
-
-        } catch (error) {
-
-          console.log(error);
-        }
-      };
-
-    return {
-      request,
-      response,
-      handleGoogleSignIn,
-    };
+      console.log(error);
+    }
 };

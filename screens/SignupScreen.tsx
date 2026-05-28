@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import {
-  useGoogleAuth,
+  handleGoogleSignIn,
 } from "../services/googleAuth";
 
 import {
@@ -39,10 +39,6 @@ import AuthBackground
 from "../components/AuthBackground";
 
 export default function SignupScreen() {
-  const {
-    handleGoogleSignIn,
-  } = useGoogleAuth();
-
   const [email, setEmail] =
   useState("");
 
