@@ -3,6 +3,14 @@ import {
 } from "@react-native-google-signin/google-signin";
 
 import {
+  userExists,
+} from "./userService";
+
+import {
+  router,
+} from "expo-router";
+
+import {
   GoogleAuthProvider,
   signInWithCredential,
 } from "firebase/auth";
@@ -38,14 +46,28 @@ export const handleGoogleSignIn =
           idToken
         );
 
-      await signInWithCredential(
-        auth,
-        credential
-      );
+      const result =
+        await signInWithCredential(
+          auth,
+          credential
+        );
 
-      console.log(
-        "Google Login Success"
-      );
+      const uid =
+        result.user.uid;
+
+      const exists =
+        await userExists(uid);
+
+      if (exists) {
+
+        router.replace("/home");
+
+      } else {
+
+        router.replace(
+          "/username-setup"
+        );
+      }
 
     } catch (error) {
 

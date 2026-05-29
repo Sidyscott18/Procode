@@ -68,10 +68,7 @@ export default function SignupScreen() {
           password
         );
 
-        Alert.alert(
-          "Verification Email Sent",
-          "Please check your Gmail inbox."
-        );
+        router.replace("/verify-email");
 
       } catch (error: any) {
 
