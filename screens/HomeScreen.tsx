@@ -19,12 +19,13 @@ import {
 } from "react-native";
 
 import { useEffect, useState, useRef } from "react";
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, setDoc } from "firebase/firestore";
 import { router } from "expo-router";
 import { auth, db } from "../services/firebase";
 import AuthBackground from "../components/AuthBackground";
 import { LinearGradient } from "expo-linear-gradient";
 import { GameData } from "../services/gameService";
+import { BlurView } from "expo-blur";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -37,7 +38,6 @@ interface Game {
   playable: boolean;
   image: ImageSourcePropType | null;
   genre?: string;
-  progress?: number; // fallback progress
 }
 
 interface PlaceholderThumbProps {
@@ -63,7 +63,6 @@ const continuePlaying: Game[] = [
     description: "Defend your data fortress against waves of type errors and corrupted variables. Learn Python data types — integers, strings, lists, and dicts — by deploying the right defences at the right time.",
     playable: true,
     image: require("../assets/games/pyro.png"),
-    progress: 0.42,
   },
 ];
 
@@ -107,7 +106,7 @@ const genreColor: Record<string, string> = {
   RPG: "#F74F8E",
 };
 
-// ── Placeholder Thumb ─────────────────────────────────────────
+// ── Shared UI ─────────────────────────────────────────────────
 function PlaceholderThumb({ title, style }: PlaceholderThumbProps) {
   return (
     <View style={[style, { backgroundColor: "#0D1730", alignItems: "center", justifyContent: "center" }]}>
@@ -117,7 +116,6 @@ function PlaceholderThumb({ title, style }: PlaceholderThumbProps) {
   );
 }
 
-// ── Animated Card Wrapper ─────────────────────────────────────
 function PressCard({ onPress, style, children }: { onPress: () => void; style?: StyleProp<ViewStyle>; children: React.ReactNode; }) {
   const scale = useRef(new Animated.Value(1)).current;
   const onPressIn = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
@@ -138,13 +136,12 @@ function GameSheet({ game, visible, onClose, onPlay, onAction }: GameSheetProps)
     if (visible && game) {
       Animated.spring(slideAnim, { toValue: 0, damping: 20, mass: 0.8, stiffness: 120, useNativeDriver: true }).start();
       
-      // Setup realtime listener for game data
       const uid = auth.currentUser?.uid;
       if (uid) {
         const docRef = doc(db, "users", uid, "games", game.id);
         const unsubscribe = onSnapshot(docRef, (snap) => {
           if (snap.exists()) setStats(snap.data() as GameData);
-          else setStats(null);
+          else setStats({ level: 0, xp: 0, coins: 0, highScore: 0, highestWave: 0, completion: 0 }); // Init to 0
         });
         return () => unsubscribe();
       }
@@ -159,9 +156,12 @@ function GameSheet({ game, visible, onClose, onPlay, onAction }: GameSheetProps)
   const accent = genreColor[game.genre ?? ""] ?? "#4F6EF7";
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <TouchableOpacity activeOpacity={1} style={styles.sheetBackdrop} onPress={onClose} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill}>
+        <TouchableOpacity activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onClose} />
+      </BlurView>
       <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+        <LinearGradient colors={["rgba(11, 17, 32, 0.95)", "rgba(8, 14, 30, 1)"]} style={StyleSheet.absoluteFillObject} />
         <View style={styles.sheetHandle} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
           {game.image ? (
@@ -205,16 +205,24 @@ function GameSheet({ game, visible, onClose, onPlay, onAction }: GameSheetProps)
           {/* Action Bar */}
           <View style={styles.actionBar}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => onAction("recap")}>
-              <Text style={styles.actionBtnText}>📘 Quick Recap</Text>
+              <LinearGradient colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.02)"]} style={styles.actionBtnGradient}>
+                <Text style={styles.actionBtnIcon}>📘</Text>
+                <Text style={styles.actionBtnText}>Quick Recap</Text>
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => onAction("ai")}>
-              <Text style={styles.actionBtnText}>🤖 Ask AI</Text>
+              <LinearGradient colors={["rgba(79, 110, 247, 0.2)", "rgba(79, 110, 247, 0.05)"]} style={styles.actionBtnGradient}>
+                <Text style={styles.actionBtnIcon}>🤖</Text>
+                <Text style={[styles.actionBtnText, {color: "#E2E8F0"}]}>Ask AI</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
           
           {game.playable ? (
-            <TouchableOpacity style={[styles.playBtn, { backgroundColor: accent }]} onPress={() => onPlay(game)} activeOpacity={0.85}>
-              <Text style={styles.playBtnText}>▶  PLAY NOW</Text>
+            <TouchableOpacity style={styles.playBtnWrapper} onPress={() => onPlay(game)} activeOpacity={0.85}>
+              <LinearGradient colors={[accent, accent + "DD"]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.playBtnGradient}>
+                 <Text style={styles.playBtnText}>▶  PLAY NOW</Text>
+              </LinearGradient>
             </TouchableOpacity>
           ) : (
             <View style={styles.comingSoonBtn}>
@@ -236,24 +244,34 @@ function QuickRecapModal({ visible, onClose }: { visible: boolean; onClose: () =
   }, [visible, slideAnim]);
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <TouchableOpacity activeOpacity={1} style={styles.sheetBackdrop} onPress={onClose} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill}>
+         <TouchableOpacity activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onClose} />
+      </BlurView>
       <Animated.View style={[styles.glassSheet, { transform: [{ translateY: slideAnim }] }]}>
+        <LinearGradient colors={["rgba(20, 25, 45, 0.9)", "rgba(10, 15, 30, 0.95)"]} style={StyleSheet.absoluteFillObject} />
         <View style={styles.sheetHandle} />
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>📘 Quick Recap</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
         </View>
         <ScrollView style={styles.modalScroll}>
-          <Text style={styles.recapText}>In this section, you&apos;ll review the core concepts you&apos;ve mastered so far.</Text>
-          {/* Placeholder for real recap content */}
+          <Text style={styles.recapText}>Here&apos;s what you need to know before you deploy your defenses:</Text>
+          
           <View style={styles.recapCard}>
-            <Text style={styles.recapCardTitle}>Data Types</Text>
-            <Text style={styles.recapCardDesc}>Integers, Strings, Lists, and Dictionaries form the foundation of Python data structures.</Text>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>🔢</Text>
+                <Text style={styles.recapCardTitle}>Data Types & Variables</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Variables store data. An <Text style={{fontWeight:'bold', color: "#4FF79E"}}>Integer</Text> is a whole number, a <Text style={{fontWeight:'bold', color: "#F7D44F"}}>String</Text> is text, and a <Text style={{fontWeight:'bold', color: "#C84FF7"}}>List</Text> holds multiple ordered items.</Text>
           </View>
+
           <View style={styles.recapCard}>
-            <Text style={styles.recapCardTitle}>Conditional Logic</Text>
-            <Text style={styles.recapCardDesc}>If/Elif/Else statements allow you to branch your code execution based on dynamic logic.</Text>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>🔀</Text>
+                <Text style={styles.recapCardTitle}>Conditional Logic</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Use <Text style={{fontFamily: "monospace", color: "#4F6EF7"}}>if / elif / else</Text> to make decisions in your code. The first true condition executes its block.</Text>
           </View>
         </ScrollView>
       </Animated.View>
@@ -271,13 +289,18 @@ function AskAiModal({ visible, onClose }: { visible: boolean; onClose: () => voi
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View style={[styles.fullScreenModal, { opacity: fadeAnim }]}>
-        <LinearGradient colors={["#0B1120", "#080E1E", "#050811"]} style={StyleSheet.absoluteFillObject} />
+        <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFillObject} />
+        <LinearGradient colors={["rgba(11, 17, 32, 0.7)", "rgba(5, 8, 17, 0.95)"]} style={StyleSheet.absoluteFillObject} />
+        
         <View style={styles.modalHeaderFullScreen}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-             <View style={styles.aiAvatar}><Text style={{fontSize: 20}}>🤖</Text></View>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+             <View style={styles.aiAvatar}>
+                <LinearGradient colors={["#C84FF7", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+                <Text style={{fontSize: 22}}>🤖</Text>
+             </View>
              <View>
-               <Text style={styles.modalTitle}>AI Assistant</Text>
-               <Text style={styles.aiStatus}>Online</Text>
+               <Text style={styles.modalTitle}>Procode AI</Text>
+               <Text style={styles.aiStatus}>● Online</Text>
              </View>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
@@ -290,7 +313,10 @@ function AskAiModal({ visible, onClose }: { visible: boolean; onClose: () => voi
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <View style={styles.chatInputContainer}>
             <TextInput style={styles.chatInput} placeholder="Ask AI anything..." placeholderTextColor="#64748B" />
-            <TouchableOpacity style={styles.sendBtn}><Text style={styles.sendBtnText}>➤</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.sendBtn}>
+               <LinearGradient colors={["#4F6EF7", "#3B52CA"]} style={StyleSheet.absoluteFillObject} />
+               <Text style={styles.sendBtnText}>➤</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Animated.View>
@@ -302,13 +328,13 @@ function AskAiModal({ visible, onClose }: { visible: boolean; onClose: () => voi
 // ── Main Screen ───────────────────────────────────────────────
 export default function HomeScreen() {
   const [displayName, setDisplayName] = useState("Coder");
-  const [level, setLevel] = useState(1);
+  const [level, setLevel] = useState(0);
   const [xp, setXp] = useState(0);
   
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [sheetVisible, setSheetVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
+  const [sheetVisible, setSheetVisible] = useState(false);
   const [recapVisible, setRecapVisible] = useState(false);
   const [aiVisible, setAiVisible] = useState(false);
 
@@ -316,14 +342,16 @@ export default function HomeScreen() {
     const user = auth.currentUser;
     if (!user) return;
     
-    // Live listener for user profile xp and level
     const userRef = doc(db, "users", user.uid);
     const unsubscribe = onSnapshot(userRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setDisplayName(data.displayName || "Coder");
-        setLevel(data.level || 1);
-        setXp(data.xp || 0);
+        setLevel(data.level ?? 0);
+        setXp(data.xp ?? 0);
+      } else {
+        // Init user to level 0 and 0 xp
+        setDoc(userRef, { displayName: user.displayName || "Coder", level: 0, xp: 0, coins: 0 }, { merge: true });
       }
     });
     
@@ -351,9 +379,17 @@ export default function HomeScreen() {
       if (action === "ai") setAiVisible(true);
   };
   
-  // XP Calculation
-  const nextLevelXp = level * 100;
-  const xpProgress = (xp % nextLevelXp) / nextLevelXp;
+  // XP Calculation - Required for NEXT level
+  const getLevelStart = (lvl: number) => {
+     let start = 0;
+     for(let i=0; i<lvl; i++) start += (i+1)*100;
+     return start;
+  }
+  const currentLevelStart = getLevelStart(level);
+  const nextLevelStart = getLevelStart(level + 1);
+  const xpForCurrentLevel = nextLevelStart - currentLevelStart;
+  const currentProgressXp = xp - currentLevelStart;
+  const xpProgress = Math.max(0, Math.min(1, currentProgressXp / xpForCurrentLevel));
 
   return (
     <AuthBackground>
@@ -373,10 +409,11 @@ export default function HomeScreen() {
           
           {/* Profile Card Top Right */}
           <TouchableOpacity activeOpacity={0.8} style={styles.profileCard} onPress={() => router.push("/profile" as any)}>
+              <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFillObject} />
               <View style={styles.profileCardLeft}>
                  <Text style={styles.profileCardLevel}>Lvl {level}</Text>
                  <View style={styles.profileCardProgressBg}>
-                    <LinearGradient colors={["#4FF79E", "#4F6EF7"]} start={{x:0,y:0}} end={{x:1,y:0}} style={[styles.profileCardProgressFill, { width: `${xpProgress * 100}%` }]} />
+                    <LinearGradient colors={["#4FF79E", "#4F6EF7"]} start={{x:0,y:0}} end={{x:1,y:0}} style={[styles.profileCardProgressFill, { width: `${(xpProgress || 0) * 100}%` }]} />
                  </View>
               </View>
               <View style={styles.avatarBtn}>
@@ -387,6 +424,7 @@ export default function HomeScreen() {
 
         {/* Search */}
         <View style={styles.searchWrap}>
+          <BlurView intensity={15} tint="light" style={StyleSheet.absoluteFillObject} />
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput placeholder="Search games..." placeholderTextColor="#64748B" style={styles.search} value={searchQuery} onChangeText={setSearchQuery} />
         </View>
@@ -397,8 +435,13 @@ export default function HomeScreen() {
           {continuePlaying.map((game) => (
              <PressCard key={game.id} onPress={() => openGameSheet(game)} style={styles.heroCard}>
                {game.image ? <Image source={game.image} style={styles.heroImage as StyleProp<ImageStyle>} resizeMode="cover" /> : <PlaceholderThumb title={game.title} style={styles.heroImage} />}
-               <LinearGradient colors={["transparent", "rgba(11,17,32,0.8)", "rgba(11,17,32,1)"]} style={styles.heroGradient} />
-               {game.genre && <View style={[styles.heroPill, { backgroundColor: genreColor[game.genre] ?? "#4F6EF7" }]}><Text style={styles.heroPillText}>{game.genre}</Text></View>}
+               <LinearGradient colors={["transparent", "rgba(11,17,32,0.85)", "rgba(5, 8, 17, 1)"]} style={styles.heroGradient} />
+               {game.genre && (
+                 <BlurView intensity={30} tint="dark" style={[styles.heroPill, { overflow: 'hidden' }]}>
+                   <View style={{backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "40", ...StyleSheet.absoluteFillObject}} />
+                   <Text style={[styles.heroPillText, {color: genreColor[game.genre] ?? "#4FF79E"}]}>{game.genre}</Text>
+                 </BlurView>
+               )}
                <View style={styles.heroContent}>
                  <Text style={styles.heroTitle}>{game.title}</Text>
                  <Text style={styles.heroSubtitle}>{game.subtitle}</Text>
@@ -414,7 +457,7 @@ export default function HomeScreen() {
              <PressCard key={game.id + game.title} onPress={() => openGameSheet(game)} style={styles.gameCard}>
                <View style={styles.gameImageWrap}>
                  {game.image ? <Image source={game.image} style={styles.gameImage as StyleProp<ImageStyle>} resizeMode="cover" /> : <PlaceholderThumb title={game.title} style={styles.gameImage} />}
-                 {game.genre && <View style={[styles.gameChip, { backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "DD" }]}><Text style={styles.gameChipText}>{game.genre}</Text></View>}
+                 {game.genre && <View style={[styles.gameChip, { backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "CC" }]}><Text style={styles.gameChipText}>{game.genre}</Text></View>}
                  {!game.playable && <View style={styles.gameDim} />}
                </View>
                <Text style={styles.gameTitle} numberOfLines={1}>{game.title}</Text>
@@ -438,22 +481,22 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { paddingTop: 60, paddingBottom: 130 },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 28 },
-  greeting: { color: "#fff", fontSize: 26, fontWeight: "800", letterSpacing: -0.3 },
-  subGreeting: { color: "#94A3B8", fontSize: 14, marginTop: 3, fontWeight: "500" },
+  greeting: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: -0.5 },
+  subGreeting: { color: "#94A3B8", fontSize: 14, marginTop: 4, fontWeight: "600" },
   
   // Profile Card
-  profileCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 28, padding: 6, paddingLeft: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  profileCardLeft: { marginRight: 10, alignItems: "flex-end" },
-  profileCardLevel: { color: "#fff", fontSize: 13, fontWeight: "700", marginBottom: 4 },
-  profileCardProgressBg: { width: 50, height: 4, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, overflow: "hidden" },
-  profileCardProgressFill: { height: "100%", borderRadius: 2 },
-  avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#4F6EF7", alignItems: "center", justifyContent: "center" },
-  avatarBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  profileCard: { flexDirection: "row", alignItems: "center", backgroundColor: "transparent", borderRadius: 28, padding: 6, paddingLeft: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
+  profileCardLeft: { marginRight: 10, alignItems: "flex-end", zIndex: 2 },
+  profileCardLevel: { color: "#fff", fontSize: 13, fontWeight: "800", marginBottom: 5 },
+  profileCardProgressBg: { width: 50, height: 5, backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 3, overflow: "hidden" },
+  profileCardProgressFill: { height: "100%", borderRadius: 3 },
+  avatarBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#4F6EF7", alignItems: "center", justifyContent: "center", zIndex: 2, shadowColor: "#4F6EF7", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  avatarBtnText: { color: "#fff", fontSize: 17, fontWeight: "800" },
   
   // Search
-  searchWrap: { marginHorizontal: 22, height: 54, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.04)", flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginBottom: 32, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  searchIcon: { fontSize: 16, marginRight: 12 },
-  search: { flex: 1, color: "#fff", fontSize: 15, fontWeight: "500" },
+  searchWrap: { marginHorizontal: 22, height: 54, borderRadius: 18, backgroundColor: "transparent", flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginBottom: 32, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden" },
+  searchIcon: { fontSize: 16, marginRight: 12, zIndex: 2 },
+  search: { flex: 1, color: "#fff", fontSize: 15, fontWeight: "500", zIndex: 2 },
   
   // Sections
   sectionHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 16 },
@@ -461,85 +504,89 @@ const styles = StyleSheet.create({
   
   // Hero Card
   heroRow: { paddingLeft: 22, paddingRight: 8, marginBottom: 32 },
-  heroCard: { width: SCREEN_WIDTH - 60, borderRadius: 24, overflow: "hidden", marginRight: 16, backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  heroImage: { width: "100%", height: 200 },
+  heroCard: { width: SCREEN_WIDTH - 60, borderRadius: 28, overflow: "hidden", marginRight: 16, backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.6, shadowRadius: 20, elevation: 12 },
+  heroImage: { width: "100%", height: 210 },
   heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 160 },
-  heroPill: { position: "absolute", top: 14, left: 14, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  heroPillText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
-  heroContent: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 18, paddingBottom: 18 },
-  heroTitle: { color: "#fff", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
-  heroSubtitle: { color: "#94A3B8", fontSize: 14, fontWeight: "500", marginTop: 4 },
+  heroPill: { position: "absolute", top: 16, left: 16, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  heroPillText: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
+  heroContent: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 20 },
+  heroTitle: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
+  heroSubtitle: { color: "#94A3B8", fontSize: 14, fontWeight: "600", marginTop: 4 },
   
   // Small Card
   cardRow: { paddingLeft: 22, paddingRight: 8, marginBottom: 28 },
   gameCard: { width: 164, marginRight: 14 },
   gameImageWrap: { width: "100%", height: 118, borderRadius: 20, overflow: "hidden", backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   gameImage: { width: "100%", height: "100%" },
-  gameChip: { position: "absolute", top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  gameChipText: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
+  gameChip: { position: "absolute", top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  gameChipText: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   gameDim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
-  gameTitle: { color: "#E2E8F0", fontSize: 15, fontWeight: "700", marginTop: 12 },
-  gameSubtitle: { color: "#64748B", fontSize: 12, fontWeight: "500", marginTop: 4 },
+  gameTitle: { color: "#E2E8F0", fontSize: 15, fontWeight: "800", marginTop: 12, letterSpacing: -0.2 },
+  gameSubtitle: { color: "#64748B", fontSize: 12, fontWeight: "600", marginTop: 4 },
 
-  // Bottom Sheet
-  sheetBackdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.65)" },
-  sheet: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#0A0F1E", borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: SCREEN_HEIGHT * 0.88, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderBottomWidth: 0 },
-  sheetHandle: { width: 44, height: 5, borderRadius: 2.5, backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "center", marginTop: 14, marginBottom: 8 },
+  // Game Sheet
+  sheet: { position: "absolute", bottom: 0, left: 0, right: 0, borderTopLeftRadius: 36, borderTopRightRadius: 36, maxHeight: SCREEN_HEIGHT * 0.88, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderBottomWidth: 0, overflow: "hidden" },
+  sheetHandle: { width: 48, height: 5, borderRadius: 2.5, backgroundColor: "rgba(255,255,255,0.3)", alignSelf: "center", marginTop: 14, marginBottom: 12 },
   sheetThumb: { width: "100%", height: 210 },
-  sheetGenreBadge: { marginHorizontal: 22, marginTop: 18, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  sheetGenreText: { fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  sheetInfo: { paddingHorizontal: 22, paddingTop: 14 },
-  sheetTitle: { color: "#fff", fontSize: 24, fontWeight: "800", letterSpacing: -0.2 },
+  sheetGenreBadge: { marginHorizontal: 22, marginTop: 20, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  sheetGenreText: { fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  sheetInfo: { paddingHorizontal: 22, paddingTop: 16 },
+  sheetTitle: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: -0.5 },
   sheetTag: { color: "#94A3B8", fontSize: 14, fontWeight: "600", marginTop: 6, letterSpacing: 0.3 },
-  sheetDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginVertical: 20 },
+  sheetDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginVertical: 24 },
   sheetDescHeading: { color: "#fff", fontSize: 16, fontWeight: "800", marginBottom: 12 },
-  sheetDesc: { color: "#94A3B8", fontSize: 14, lineHeight: 22 },
-  sheetFooter: { paddingHorizontal: 22, paddingVertical: 20, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", backgroundColor: "#0A0F1E" },
+  sheetDesc: { color: "#94A3B8", fontSize: 14, lineHeight: 24, fontWeight: "500" },
+  sheetFooter: { paddingHorizontal: 22, paddingVertical: 20, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", backgroundColor: "rgba(5, 8, 17, 0.95)" },
   
   // Game Sheet Action Bar
   actionBar: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  actionBtn: { flex: 1, height: 46, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
-  actionBtnText: { color: "#E2E8F0", fontSize: 14, fontWeight: "700" },
-  playBtn: { borderRadius: 16, height: 56, alignItems: "center", justifyContent: "center" },
-  playBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 1.5 },
-  comingSoonBtn: { backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 16, height: 56, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  comingSoonText: { color: "#64748B", fontSize: 15, fontWeight: "700", letterSpacing: 1 },
+  actionBtn: { flex: 1, height: 48, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  actionBtnGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  actionBtnIcon: { fontSize: 16 },
+  actionBtnText: { color: "#E2E8F0", fontSize: 14, fontWeight: "800" },
+  playBtnWrapper: { borderRadius: 18, height: 58, shadowColor: "#4F6EF7", shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.5, shadowRadius: 12, elevation: 8, overflow: 'hidden' },
+  playBtnGradient: { flex: 1, alignItems: "center", justifyContent: "center" },
+  playBtnText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 1.5 },
+  comingSoonBtn: { backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 18, height: 58, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  comingSoonText: { color: "#64748B", fontSize: 15, fontWeight: "800", letterSpacing: 1 },
 
   // Live Stats Grid
-  liveStatsContainer: { marginTop: 24 },
-  liveStatsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  liveStatItem: { width: "31%", backgroundColor: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
-  liveStatLabel: { color: "#64748B", fontSize: 10, fontWeight: "700", textTransform: "uppercase", marginBottom: 4 },
-  liveStatValue: { color: "#E2E8F0", fontSize: 16, fontWeight: "800" },
-  lastPlayedText: { color: "#64748B", fontSize: 12, marginTop: 12, fontStyle: "italic" },
+  liveStatsContainer: { marginTop: 28 },
+  liveStatsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  liveStatItem: { width: "31%", backgroundColor: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  liveStatLabel: { color: "#64748B", fontSize: 10, fontWeight: "800", textTransform: "uppercase", marginBottom: 6 },
+  liveStatValue: { color: "#E2E8F0", fontSize: 18, fontWeight: "900" },
+  lastPlayedText: { color: "#64748B", fontSize: 12, marginTop: 14, fontStyle: "italic", fontWeight: "600" },
 
   // Glass Sheet (Quick Recap)
-  glassSheet: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(11,17,32,0.85)", borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: SCREEN_HEIGHT * 0.7, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderBottomWidth: 0 },
+  glassSheet: { position: "absolute", bottom: 0, left: 0, right: 0, borderTopLeftRadius: 36, borderTopRightRadius: 36, maxHeight: SCREEN_HEIGHT * 0.75, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", borderBottomWidth: 0, overflow: "hidden" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingBottom: 16, paddingTop: 10 },
-  modalTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
+  modalTitle: { color: "#fff", fontSize: 22, fontWeight: "900" },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
   closeBtnText: { color: "#94A3B8", fontSize: 16, fontWeight: "800" },
   modalScroll: { paddingHorizontal: 22, paddingBottom: 40 },
-  recapText: { color: "#94A3B8", fontSize: 15, lineHeight: 22, marginBottom: 20 },
-  recapCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  recapCardTitle: { color: "#4F6EF7", fontSize: 16, fontWeight: "800", marginBottom: 6 },
-  recapCardDesc: { color: "#E2E8F0", fontSize: 14, lineHeight: 20 },
+  recapText: { color: "#94A3B8", fontSize: 15, lineHeight: 24, marginBottom: 24, fontWeight: "500" },
+  recapCard: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  recapCardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  recapCardIcon: { fontSize: 20 },
+  recapCardTitle: { color: "#fff", fontSize: 17, fontWeight: "900" },
+  recapCardDesc: { color: "#E2E8F0", fontSize: 14, lineHeight: 22, fontWeight: "500" },
 
   // Full Screen Modal (Ask AI)
   fullScreenModal: { flex: 1 },
-  modalHeaderFullScreen: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
-  aiAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
-  aiStatus: { color: "#4FF79E", fontSize: 12, fontWeight: "600", marginTop: 2 },
+  modalHeaderFullScreen: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(11, 17, 32, 0.4)", zIndex: 10 },
+  aiAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  aiStatus: { color: "#4FF79E", fontSize: 12, fontWeight: "800", marginTop: 4, letterSpacing: 0.5 },
   chatContainer: { padding: 22 },
-  chatBubbleAi: { backgroundColor: "rgba(255,255,255,0.08)", padding: 16, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: "85%", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  chatTextAi: { color: "#E2E8F0", fontSize: 15, lineHeight: 22 },
-  chatInputContainer: { flexDirection: "row", alignItems: "center", padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(11,17,32,0.95)" },
-  chatInput: { flex: 1, height: 50, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 25, paddingHorizontal: 20, color: "#fff", fontSize: 15, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  sendBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#4F6EF7", alignItems: "center", justifyContent: "center", marginLeft: 12 },
-  sendBtnText: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  chatBubbleAi: { backgroundColor: "rgba(255,255,255,0.08)", padding: 18, borderRadius: 24, borderTopLeftRadius: 6, maxWidth: "88%", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", shadowColor: "#000", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.2, shadowRadius: 8 },
+  chatTextAi: { color: "#E2E8F0", fontSize: 15, lineHeight: 24, fontWeight: "500" },
+  chatInputContainer: { flexDirection: "row", alignItems: "center", padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(5, 8, 17, 0.85)" },
+  chatInput: { flex: 1, height: 52, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 26, paddingHorizontal: 20, color: "#fff", fontSize: 15, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", fontWeight: "500" },
+  sendBtn: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", marginLeft: 12, overflow: "hidden", shadowColor: "#4F6EF7", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  sendBtnText: { color: "#fff", fontSize: 20, fontWeight: "900" },
 
   // Floating AI Button
-  floatingAiBtn: { position: "absolute", bottom: 24, right: 24, shadowColor: "#C84FF7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
-  floatingAiGradient: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
-  floatingAiText: { fontSize: 26 },
+  floatingAiBtn: { position: "absolute", bottom: 24, right: 24, shadowColor: "#C84FF7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 12 },
+  floatingAiGradient: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  floatingAiText: { fontSize: 28 },
 });

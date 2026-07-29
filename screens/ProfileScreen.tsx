@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import AuthBackground from "../components/AuthBackground";
+import { BlurView } from "expo-blur";
 
 export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState("Coder");
-  const [level, setLevel] = useState(1);
+  const [level, setLevel] = useState(0);
   const [xp, setXp] = useState(0);
   const [coins, setCoins] = useState(0);
   
@@ -28,7 +29,7 @@ export default function ProfileScreen() {
       if (snap.exists()) {
         const data = snap.data();
         setDisplayName(data.displayName || "Coder");
-        setLevel(data.level || 1);
+        setLevel(data.level ?? 0);
         setXp(data.xp || 0);
         setCoins(data.coins || 0);
       }
@@ -46,8 +47,16 @@ export default function ProfileScreen() {
     }
   };
 
-  const nextLevelXp = level * 100;
-  const xpProgress = (xp % nextLevelXp) / nextLevelXp;
+  const getLevelStart = (lvl: number) => {
+     let start = 0;
+     for(let i=0; i<lvl; i++) start += (i+1)*100;
+     return start;
+  }
+  const currentLevelStart = getLevelStart(level);
+  const nextLevelStart = getLevelStart(level + 1);
+  const xpForCurrentLevel = nextLevelStart - currentLevelStart;
+  const currentProgressXp = xp - currentLevelStart;
+  const xpProgress = Math.max(0, Math.min(1, currentProgressXp / xpForCurrentLevel));
 
   return (
     <AuthBackground>
@@ -56,6 +65,7 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFillObject} />
             <Text style={styles.backBtnText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -64,15 +74,21 @@ export default function ProfileScreen() {
 
         {/* Profile Card */}
         <View style={styles.profileCard}>
-           <LinearGradient colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]} style={styles.profileCardGradient}>
+           <BlurView intensity={15} tint="light" style={StyleSheet.absoluteFillObject} />
+           <LinearGradient colors={["rgba(255,255,255,0.06)", "rgba(255,255,255,0.01)"]} style={styles.profileCardGradient}>
               <View style={styles.avatarLarge}>
+                 <LinearGradient colors={["#C84FF7", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
                  <Text style={styles.avatarLargeText}>{displayName.charAt(0).toUpperCase()}</Text>
               </View>
               <Text style={styles.profileName}>{displayName}</Text>
-              <Text style={styles.profileLevelBadge}>Level {level}</Text>
+              
+              <View style={styles.profileLevelBadge}>
+                 <LinearGradient colors={["rgba(79, 110, 247, 0.25)", "rgba(79, 110, 247, 0.05)"]} style={StyleSheet.absoluteFillObject} />
+                 <Text style={styles.profileLevelBadgeText}>Level {level}</Text>
+              </View>
               
               <View style={styles.xpRow}>
-                <Text style={styles.xpText}>{xp} / {xp + (nextLevelXp - (xp % nextLevelXp))} XP</Text>
+                <Text style={styles.xpText}>{currentProgressXp} / {xpForCurrentLevel} XP</Text>
               </View>
               <View style={styles.progressBg}>
                 <LinearGradient 
@@ -87,11 +103,13 @@ export default function ProfileScreen() {
         {/* Core Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
+            <BlurView intensity={15} tint="light" style={StyleSheet.absoluteFillObject} />
             <Text style={styles.statIcon}>💰</Text>
             <Text style={styles.statValue}>{coins}</Text>
             <Text style={styles.statLabel}>Coins</Text>
           </View>
           <View style={styles.statCard}>
+            <BlurView intensity={15} tint="light" style={StyleSheet.absoluteFillObject} />
             <Text style={styles.statIcon}>🔥</Text>
             <Text style={styles.statValue}>{streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
@@ -101,6 +119,8 @@ export default function ProfileScreen() {
         {/* Detailed Stats */}
         <Text style={styles.sectionTitle}>Detailed Statistics</Text>
         <View style={styles.detailsContainer}>
+           <BlurView intensity={10} tint="light" style={StyleSheet.absoluteFillObject} />
+           
            <View style={styles.detailRow}>
               <View style={styles.detailLeft}>
                 <View style={[styles.detailIconWrap, { backgroundColor: "rgba(79, 110, 247, 0.2)" }]}>
@@ -121,7 +141,7 @@ export default function ProfileScreen() {
               <Text style={styles.detailValue}>{achievements}</Text>
            </View>
 
-           <View style={styles.detailRow}>
+           <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
               <View style={styles.detailLeft}>
                 <View style={[styles.detailIconWrap, { backgroundColor: "rgba(79, 247, 158, 0.2)" }]}>
                   <Text style={styles.detailIcon}>⏱️</Text>
@@ -133,7 +153,8 @@ export default function ProfileScreen() {
         </View>
 
         {/* Actions */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+          <LinearGradient colors={["rgba(248, 113, 113, 0.15)", "rgba(248, 113, 113, 0.05)"]} style={StyleSheet.absoluteFillObject} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
         
@@ -145,37 +166,38 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { paddingTop: 60, paddingBottom: 60 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, marginBottom: 30 },
-  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
+  backBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
   backBtnText: { color: "#fff", fontSize: 20 },
-  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  headerTitle: { color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
   
-  profileCard: { marginHorizontal: 22, borderRadius: 32, overflow: "hidden", marginBottom: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  profileCard: { marginHorizontal: 22, borderRadius: 36, overflow: "hidden", marginBottom: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15 },
   profileCardGradient: { padding: 32, alignItems: "center" },
-  avatarLarge: { width: 88, height: 88, borderRadius: 44, backgroundColor: "#4F6EF7", alignItems: "center", justifyContent: "center", marginBottom: 16, shadowColor: "#4F6EF7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
-  avatarLargeText: { color: "#fff", fontSize: 36, fontWeight: "900" },
-  profileName: { color: "#fff", fontSize: 28, fontWeight: "800", marginBottom: 6 },
-  profileLevelBadge: { color: "#4F6EF7", fontSize: 16, fontWeight: "800", backgroundColor: "rgba(79, 110, 247, 0.15)", paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, overflow: "hidden", marginBottom: 24 },
+  avatarLarge: { width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center", marginBottom: 16, overflow: 'hidden', borderWidth: 2, borderColor: "rgba(255,255,255,0.2)", shadowColor: "#4F6EF7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 },
+  avatarLargeText: { color: "#fff", fontSize: 40, fontWeight: "900" },
+  profileName: { color: "#fff", fontSize: 30, fontWeight: "900", marginBottom: 8, letterSpacing: -0.5 },
+  profileLevelBadge: { borderRadius: 12, overflow: "hidden", marginBottom: 28, borderWidth: 1, borderColor: "rgba(79, 110, 247, 0.4)" },
+  profileLevelBadgeText: { color: "#4F6EF7", fontSize: 15, fontWeight: "800", paddingHorizontal: 16, paddingVertical: 6, letterSpacing: 0.5 },
   
   xpRow: { width: "100%", flexDirection: "row", justifyContent: "flex-end", marginBottom: 8 },
-  xpText: { color: "#94A3B8", fontSize: 13, fontWeight: "700" },
-  progressBg: { width: "100%", height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" },
+  xpText: { color: "#94A3B8", fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
+  progressBg: { width: "100%", height: 8, backgroundColor: "rgba(0,0,0,0.4)", borderRadius: 4, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
   progressFill: { height: "100%", borderRadius: 4 },
   
   statsRow: { flexDirection: "row", marginHorizontal: 22, gap: 14, marginBottom: 32 },
-  statCard: { flex: 1, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 20, paddingVertical: 20, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  statIcon: { fontSize: 24, marginBottom: 8 },
-  statValue: { color: "#fff", fontSize: 22, fontWeight: "900" },
-  statLabel: { color: "#94A3B8", fontSize: 13, marginTop: 4, fontWeight: "600" },
+  statCard: { flex: 1, borderRadius: 24, paddingVertical: 22, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  statIcon: { fontSize: 28, marginBottom: 8 },
+  statValue: { color: "#E2E8F0", fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
+  statLabel: { color: "#94A3B8", fontSize: 13, marginTop: 4, fontWeight: "700", textTransform: 'uppercase', letterSpacing: 0.5 },
   
-  sectionTitle: { color: "#fff", fontSize: 18, fontWeight: "800", marginHorizontal: 22, marginBottom: 16 },
-  detailsContainer: { marginHorizontal: 22, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 24, padding: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", marginBottom: 32 },
-  detailRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)" },
-  detailLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  detailIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  detailIcon: { fontSize: 18 },
-  detailLabel: { color: "#E2E8F0", fontSize: 15, fontWeight: "600" },
-  detailValue: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  sectionTitle: { color: "#fff", fontSize: 20, fontWeight: "900", marginHorizontal: 22, marginBottom: 16, letterSpacing: -0.2 },
+  detailsContainer: { marginHorizontal: 22, borderRadius: 28, paddingHorizontal: 20, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 32, overflow: "hidden" },
+  detailRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
+  detailLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  detailIconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  detailIcon: { fontSize: 20 },
+  detailLabel: { color: "#E2E8F0", fontSize: 16, fontWeight: "700" },
+  detailValue: { color: "#fff", fontSize: 18, fontWeight: "900" },
   
-  logoutBtn: { marginHorizontal: 22, backgroundColor: "rgba(248, 113, 113, 0.1)", borderRadius: 18, paddingVertical: 18, alignItems: "center", borderWidth: 1, borderColor: "rgba(248, 113, 113, 0.3)" },
-  logoutText: { color: "#F87171", fontSize: 16, fontWeight: "700" }
+  logoutBtn: { marginHorizontal: 22, borderRadius: 20, paddingVertical: 18, alignItems: "center", borderWidth: 1, borderColor: "rgba(248, 113, 113, 0.4)", overflow: 'hidden' },
+  logoutText: { color: "#F87171", fontSize: 17, fontWeight: "800", letterSpacing: 1 }
 });

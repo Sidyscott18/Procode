@@ -49,14 +49,14 @@ export const addPlayerXp = async (amount: number) => {
     const currentLevel = snap.data().level || 1;
     const newXp = currentXp + amount;
     
-    // Level calculation: level = floor(sqrt(xp / 100)) + 1
-    // Example formula, adjust as needed. Or just simply increment if they provided a formula, wait, they said "using your level calculation".
-    // I will just use a generic one: each level takes (level * 100) XP. 
-    // Or just simple math: Level 1 is 0-100, Level 2 is 100-300, Level 3 is 300-600.
-    let newLevel = 1;
+    // Level calculation:
+    // Level 0: 0-99 XP
+    // Level 1: 100-299 XP
+    // Level 2: 300-599 XP
+    let newLevel = 0;
     let requiredXp = 0;
-    while (newXp >= requiredXp + (newLevel * 100)) {
-        requiredXp += (newLevel * 100);
+    while (newXp >= requiredXp + ((newLevel + 1) * 100)) {
+        requiredXp += ((newLevel + 1) * 100);
         newLevel++;
     }
 
@@ -68,7 +68,8 @@ export const addPlayerXp = async (amount: number) => {
       // Initialize if not exists
       await setDoc(userRef, {
           xp: amount,
-          level: 1
+          level: 0,
+          coins: 0
       }, { merge: true });
   }
 };
