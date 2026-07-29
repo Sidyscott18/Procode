@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PYRO</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+.hide { display:none !important; }
+html, body { width:100%; height:100%; overflow:hidden; background:#000; touch-action:none; }
+canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; }
+#ui {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px; z-index:10; pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%);
+}
+.stat { display:flex; flex-direction:column; align-items:center; }
+.stat-label { font:600 8px/1 'Courier New',monospace; letter-spacing:2px; color:rgba(255,255,255,0.35); }
+.stat-val { font:900 18px/1.2 'Courier New',monospace; color:#fff; margin-top:2px; }
+#hpbar-wrap { position:fixed; top:52px; left:12px; right:12px; height:3px; background:rgba(255,255,255,0.08); border-radius:2px; z-index:10; pointer-events:none; }
+#hpbar { height:100%; background:linear-gradient(90deg,#ff4d6d,#ff9f1c); border-radius:2px; transition:width 0.25s; box-shadow:0 0 8px #ff4d6d88; }
+
+/* weapon bar */
+#wbar {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  display:flex; gap:10px; z-index:20;
+}
+.wpod {
+  width:70px; height:70px; border-radius:16px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  border:1.5px solid rgba(255,255,255,0.12); background:rgba(0,0,0,0.6);
+  cursor:pointer; transition:transform 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.wpod.active { transform:translateY(-6px) scale(1.08); }
+.wpod-key { font:900 15px/1 'Courier New',monospace; }
+.wpod-sub { font:600 7px/1 'Courier New',monospace; color:rgba(255,255,255,0.4); letter-spacing:1px; }
+.wpod-dot { width:7px; height:7px; border-radius:50%; margin-top:2px; }
+
+/* overlays */
+.overlay {
+  position:fixed; inset:0; z-index:100;
+  background:rgba(0,0,0,0.88); display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  font-family:'Courier New',monospace;
+}
+.overlay.hide { display:none !important; }
+.ov-title { font-size:48px; font-weight:900; letter-spacing:6px; line-height:1; text-align:center; }
+.ov-sub { font-size:11px; letter-spacing:4px; color:rgba(255,255,255,0.35); margin:10px 0 32px; text-align:center; }
+.ov-body { font-size:12px; color:rgba(255,255,255,0.45); text-align:center; line-height:2.2; letter-spacing:1px; margin-bottom:36px; }
+.ov-btn {
+  padding:14px 40px; border-radius:12px; border:1.5px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.06); color:#fff;
+  font:700 13px/1 'Courier New',monospace; letter-spacing:4px;
+  cursor:pointer; margin-top:8px;
+  -webkit-tap-highlight-color:transparent;
+  transition:background 0.15s, transform 0.1s;
+}
+.ov-btn:active { transform:scale(0.96); background:rgba(255,255,255,0.12); }
+
+/* shop */
+#shop-wrap {
+  position:fixed; inset:0; z-index:100;
+  background:rgba(0,0,0,0.92); overflow-y:auto;
+  display:flex; flex-direction:column; align-items:center;
+  padding:24px 16px 100px; font-family:'Courier New',monospace;
+}
+#shop-wrap.hide { display:none !important; }
+.shop-title { font-size:32px; font-weight:900; letter-spacing:4px; color:#ffd60a; margin-bottom:4px; }
+.shop-credits { font-size:16px; font-weight:700; color:#ffd60a; letter-spacing:3px; margin-bottom:20px; }
+.shop-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; max-width:420px; }
+.sitem {
+  background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:16px; padding:16px 14px; cursor:pointer;
+  transition:background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color:transparent; position:relative;
+}
+.sitem:active { background:rgba(255,255,255,0.09); }
+.sitem.owned { border-color:#4cc9f0; }
+.sitem.equipped { border-color:#7bf1a8; }
+.sitem-name { font-size:11px; font-weight:700; letter-spacing:1px; color:#fff; margin-bottom:5px; }
+.sitem-desc { font-size:9px; color:rgba(255,255,255,0.38); line-height:1.5; margin-bottom:10px; letter-spacing:0.5px; }
+.sitem-price { font-size:13px; font-weight:700; color:#ffd60a; }
+.sitem-badge { position:absolute; top:8px; right:8px; font-size:8px; letter-spacing:1px; padding:2px 6px; border-radius:5px; font-weight:700; }
+.b-owned { background:rgba(76,201,240,0.15); color:#4cc9f0; }
+.b-eq { background:rgba(123,241,168,0.15); color:#7bf1a8; }
+.shop-next { margin-top:20px; width:100%; max-width:420px; }
+.shop-next .ov-btn { width:100%; border-color:#4cc9f0; color:#4cc9f0; box-shadow:0 0 16px rgba(76,201,240,0.15); }
+
+/* toast */
+#toast {
+  position:fixed; top:70px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.85); border:1px solid rgba(255,255,255,0.12);
+  border-radius:10px; padding:8px 20px; font:700 11px/1 'Courier New',monospace;
+  letter-spacing:2px; color:#fff; z-index:200; opacity:0;
+  transition:opacity 0.2s; pointer-events:none; white-space:nowrap;
+}
+#toast.show { opacity:1; }
+
+/* floating text */
+.ftxt {
+  position:fixed; font:700 13px/1 'Courier New',monospace;
+  pointer-events:none; z-index:50; letter-spacing:1px;
+  animation:floUp 0.9s ease-out forwards;
+}
+@keyframes floUp { 0%{opacity:1;transform:translateY(0) translateX(-50%)} 100%{opacity:0;transform:translateY(-44px) translateX(-50%)} }
+
+/* ─── Tutorial overlay ─────────────────────────────────────── */
+.tut-overlay {
+  position:fixed; inset:0; z-index:150;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.3s ease;
+  font-family:'Courier New',monospace;
+}
+.tut-overlay.show { opacity:1; pointer-events:auto; }
+.tut-overlay.hide { display:none !important; }
+
+#tut-spotlight {
+  position:fixed;
+  border-radius:18px;
+  pointer-events:none;
+  transition:left 0.45s cubic-bezier(.4,0,.2,1), top 0.45s cubic-bezier(.4,0,.2,1),
+             width 0.45s cubic-bezier(.4,0,.2,1), height 0.45s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 0 2000px rgba(0,0,0,0.82);
+}
+#tut-spotlight.pulse { animation: tutPulse 1.6s ease-in-out infinite; }
+@keyframes tutPulse {
+  0%,100% { box-shadow:0 0 0 2000px rgba(0,0,0,0.82), 0 0 0 2px var(--tut-col,#4cc9f0), 0 0 18px 3px var(--tut-col,#4cc9f0); }
+  50%     { box-shadow:0 0 0 2000px rgba(0,0,0,0.82), 0 0 0 2px var(--tut-col,#4cc9f0), 0 0 32px 9px var(--tut-col,#4cc9f0); }
+}
+
+#tut-card {
+  position:fixed; left:50%; transform:translateX(-50%);
+  width:88%; max-width:340px;
+  background:rgba(8,8,18,0.96);
+  border:1.5px solid rgba(255,255,255,0.14);
+  border-radius:18px;
+  padding:20px 22px 18px;
+  opacity:0;
+  transition:opacity 0.28s ease, top 0.4s cubic-bezier(.4,0,.2,1);
+  z-index:151;
+}
+.tut-kicker { font-size:9px; letter-spacing:3px; color:rgba(255,255,255,0.4); margin-bottom:8px; }
+.tut-title { font-size:19px; font-weight:900; letter-spacing:1.2px; margin-bottom:10px; }
+.tut-body { font-size:12px; line-height:1.9; color:rgba(255,255,255,0.75); letter-spacing:0.3px; margin-bottom:14px; }
+.tut-examples { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.tut-ex { font:700 11px 'Courier New',monospace; padding:5px 10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); }
+.tut-dots { display:flex; gap:5px; margin-bottom:14px; }
+.tut-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.15); transition:background 0.3s; }
+.tut-dot.active { background:#fff; }
+.tut-next {
+  width:100%; padding:12px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.22);
+  background:rgba(255,255,255,0.07); color:#fff;
+  font:700 12px/1 'Courier New',monospace; letter-spacing:3px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:background 0.15s, transform 0.1s;
+}
+.tut-next:active { transform:scale(0.97); background:rgba(255,255,255,0.14); }
+.tut-skip {
+  display:block; text-align:center; margin-top:12px;
+  font-size:9px; letter-spacing:2px; color:rgba(255,255,255,0.3);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.tut-skip:active { color:rgba(255,255,255,0.55); }
+
+/* ─── Player level / XP bar ───────────────────────────────────── */
+#xp-wrap {
+  position:fixed; top:58px; left:12px; right:12px; z-index:10; pointer-events:none;
+  display:flex; align-items:center; gap:6px;
+}
+#xp-lvl-badge {
+  font:900 9px/1 'Courier New',monospace; color:#0c0c1a; background:#7bf1a8;
+  border-radius:6px; padding:2px 6px; letter-spacing:0.5px; white-space:nowrap;
+  box-shadow:0 0 8px rgba(123,241,168,0.5);
+}
+#xpbar-track { flex:1; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+#xpbar-fill { height:100%; width:0%; background:linear-gradient(90deg,#4cc9f0,#7bf1a8); border-radius:3px; transition:width 0.3s; box-shadow:0 0 6px #7bf1a888; }
+
+/* ─── Pause button ─────────────────────────────────────────────── */
+#pause-btn {
+  position:fixed; top:10px; right:14px; z-index:30;
+  width:34px; height:34px; border-radius:10px;
+  background:rgba(0,0,0,0.55); border:1.5px solid rgba(255,255,255,0.18);
+  display:flex; align-items:center; justify-content:center; gap:3px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+#pause-btn span { width:3.5px; height:13px; background:#fff; border-radius:2px; }
+
+/* ─── Pause menu / Stats / Achievements ────────────────────────── */
+.menu-list { display:flex; flex-direction:column; gap:12px; width:88%; max-width:340px; }
+.menu-btn {
+  padding:16px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.16);
+  background:rgba(255,255,255,0.05); color:#fff;
+  font:700 13px/1 'Courier New',monospace; letter-spacing:3px; text-align:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background 0.15s, transform 0.1s;
+}
+.menu-btn:active { transform:scale(0.97); background:rgba(255,255,255,0.12); }
+
+#stats-wrap, #ach-wrap, #miss-wrap {
+  position:fixed; inset:0; z-index:110; background:rgba(0,0,0,0.94);
+  overflow-y:auto; display:flex; flex-direction:column; align-items:center;
+  padding:28px 18px 60px; font-family:'Courier New',monospace;
+}
+#stats-wrap.hide, #ach-wrap.hide, #miss-wrap.hide { display:none !important; }
+.stats-title { font-size:28px; font-weight:900; letter-spacing:4px; color:#7bf1a8; margin-bottom:20px; }
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:420px; margin-bottom:26px; }
+.stat-card {
+  background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:14px; padding:14px 12px;
+}
+.stat-card-label { font-size:8px; letter-spacing:2px; color:rgba(255,255,255,0.4); margin-bottom:6px; }
+.stat-card-val { font-size:18px; font-weight:900; color:#fff; }
+.stats-close { width:100%; max-width:420px; }
+
+.ach-title { font-size:28px; font-weight:900; letter-spacing:4px; color:#ffd60a; margin-bottom:6px; }
+.ach-sub { font-size:10px; letter-spacing:3px; color:rgba(255,255,255,0.35); margin-bottom:20px; }
+.ach-list { display:flex; flex-direction:column; gap:10px; width:100%; max-width:420px; margin-bottom:24px; }
+.ach-item {
+  display:flex; align-items:center; gap:12px;
+  background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:14px; padding:12px 14px; opacity:0.4;
+}
+.ach-item.unlocked { opacity:1; border-color:#ffd60a; background:rgba(255,214,10,0.06); }
+.ach-icon { font-size:22px; width:34px; text-align:center; flex-shrink:0; }
+.ach-info { flex:1; }
+.ach-name { font-size:11px; font-weight:700; letter-spacing:1px; color:#fff; margin-bottom:3px; }
+.ach-desc { font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:0.5px; line-height:1.4; }
+.ach-xp { font-size:9px; font-weight:700; color:#ffd60a; white-space:nowrap; }
+
+.weapon-locked { opacity:0.35; pointer-events:none; }
+.sitem-req { font-size:9px; color:#ff9f7c; letter-spacing:0.5px; margin-top:4px; }
+
+/* level-up toast */
+#lvlup-toast {
+  position:fixed; top:40%; left:50%; transform:translate(-50%,-50%) scale(0.7);
+  z-index:300; text-align:center; font-family:'Courier New',monospace;
+  opacity:0; pointer-events:none; transition:opacity 0.3s, transform 0.3s;
+}
+#lvlup-toast.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+#lvlup-toast .lu-title { font-size:14px; letter-spacing:5px; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+#lvlup-toast .lu-num { font-size:52px; font-weight:900; color:#7bf1a8; text-shadow:0 0 30px rgba(123,241,168,0.6); }
+
+.go-stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-bottom:8px; }
+.go-stat-row { font-size:12px; letter-spacing:1px; text-align:left; }
+.go-stat-row b { color:#fff; }
+
+/* ─── Combo counter ─────────────────────────────────────────── */
+#combo-wrap {
+  position:fixed; top:96px; left:50%; transform:translateX(-50%) scale(0.75);
+  z-index:15; pointer-events:none; opacity:0; transition:opacity 0.18s, transform 0.18s;
+  font-family:'Courier New',monospace; text-align:center;
+}
+#combo-wrap.show { opacity:1; transform:translateX(-50%) scale(1); }
+#combo-wrap .combo-num { font-size:24px; font-weight:900; color:#ffd60a; text-shadow:0 0 16px rgba(255,214,10,0.65); }
+#combo-wrap .combo-lbl { font-size:8px; letter-spacing:3px; color:rgba(255,255,255,0.5); margin-top:-3px; }
+
+/* ─── Daily missions ────────────────────────────────────────── */
+.miss-title { font-size:28px; font-weight:900; letter-spacing:4px; color:#4cc9f0; margin-bottom:4px; }
+.miss-sub { font-size:9px; letter-spacing:2px; color:rgba(255,255,255,0.35); margin-bottom:20px; text-align:center; max-width:340px; line-height:1.6; }
+.miss-list { display:flex; flex-direction:column; gap:10px; width:100%; max-width:420px; margin-bottom:24px; }
+.miss-item {
+  background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:14px; padding:12px 14px;
+}
+.miss-item.done { border-color:#7bf1a8; background:rgba(123,241,168,0.06); }
+.miss-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px; }
+.miss-name { font-size:11px; font-weight:700; letter-spacing:1px; color:#fff; }
+.miss-reward { font-size:9px; font-weight:700; color:#ffd60a; white-space:nowrap; }
+.miss-desc { font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:0.5px; margin-bottom:8px; line-height:1.5; }
+.miss-bar-track { height:5px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; }
+.miss-bar-fill { height:100%; background:linear-gradient(90deg,#4cc9f0,#7bf1a8); border-radius:3px; transition:width 0.3s; }
+.miss-progress-txt { font-size:8px; color:rgba(255,255,255,0.35); margin-top:4px; text-align:right; letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="ui">
+  <div class="stat"><span class="stat-label">LEVEL</span><span class="stat-val" id="v-lvl">01</span></div>
+  <div class="stat"><span class="stat-label">HP</span><span class="stat-val" id="v-hp" style="color:#ff4d6d">100</span></div>
+  <div class="stat"><span class="stat-label">SCORE</span><span class="stat-val" id="v-sc">000000</span></div>
+  <div class="stat"><span class="stat-label">COINS</span><span class="stat-val" id="v-cr" style="color:#ffd60a">0</span></div>
+</div>
+<div id="hpbar-wrap"><div id="hpbar"></div></div>
+<div id="xp-wrap">
+  <span id="xp-lvl-badge">LVL 1</span>
+  <div id="xpbar-track"><div id="xpbar-fill"></div></div>
+</div>
+
+<!-- Pause button -->
+<div id="pause-btn" onclick="pauseGame()"><span></span><span></span></div>
+
+<!-- Level up toast -->
+<div id="lvlup-toast"><div class="lu-title">LEVEL UP</div><div class="lu-num" id="lu-num">2</div></div>
+
+<!-- Combo counter -->
+<div id="combo-wrap"><div class="combo-num" id="combo-num">2×</div><div class="combo-lbl">COMBO</div></div>
+
+<!-- Canvas -->
+<canvas id="c"></canvas>
+
+<!-- Weapon Bar -->
+<div id="wbar">
+  <div class="wpod active" id="wp-INT"   onclick="selW('INT')"  style="border-color:rgba(177,151,252,0.4);box-shadow:0 0 20px rgba(177,151,252,0.3)">
+    <span class="wpod-key" style="color:#b197fc">INT</span>
+    <span class="wpod-sub">INTEGER</span>
+    <div class="wpod-dot" style="background:#b197fc;box-shadow:0 0 6px #b197fc"></div>
+  </div>
+  <div class="wpod" id="wp-FLOAT" onclick="selW('FLOAT')">
+    <span class="wpod-key" style="color:#ff9f7c">FLT</span>
+    <span class="wpod-sub">FLOAT</span>
+    <div class="wpod-dot" style="background:#ff9f7c"></div>
+  </div>
+  <div class="wpod" id="wp-STR"   onclick="selW('STR')">
+    <span class="wpod-key" style="color:#ffd60a">STR</span>
+    <span class="wpod-sub">STRING</span>
+    <div class="wpod-dot" style="background:#ffd60a"></div>
+  </div>
+  <div class="wpod" id="wp-BOOL"  onclick="selW('BOOL')">
+    <span class="wpod-key" style="color:#4cc9f0">BOOL</span>
+    <span class="wpod-sub">BOOLEAN</span>
+    <div class="wpod-dot" style="background:#4cc9f0"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- START -->
+<div class="overlay" id="ov-start">
+  <div class="ov-title" style="color:#4cc9f0;text-shadow:0 0 40px rgba(76,201,240,0.5)">PYRO</div>
+  <div class="ov-sub">PYTHON TYPE DESTROYER</div>
+  <div class="ov-body">
+    Alien data crystals are invading.<br>
+    Match your AMMO TYPE to destroy them.<br>
+    <span style="color:#ff4d6d">Wrong type = -15 HP &nbsp;|&nbsp; Crystal breach = -20 HP</span><br>
+    <span style="color:#ffd60a">Kill = +10 credits &nbsp;|&nbsp; Level clear = +200 credits</span>
+  </div>
+  <button class="ov-btn" style="border-color:#4cc9f0;color:#4cc9f0" onclick="startGame()" id="btn-newgame">TAP TO LAUNCH</button>
+  <button class="ov-btn hide" style="border-color:#7bf1a8;color:#7bf1a8;margin-top:12px" onclick="resumeSavedRun()" id="btn-resume">RESUME MISSION</button>
+  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:12px;padding:10px 32px;font-size:11px" onclick="openStats()">STATISTICS &amp; ACHIEVEMENTS</button>
+  <button class="ov-btn" style="border-color:#ffd60a;color:#ffd60a;margin-top:12px;padding:10px 32px;font-size:11px" onclick="openMissions()">DAILY MISSIONS</button>
+</div>
+
+<!-- GAME OVER -->
+<div class="overlay hide" id="ov-dead">
+  <div class="ov-title" style="color:#ff4d6d;text-shadow:0 0 40px rgba(255,77,109,0.5)">SYSTEM<br>FAILURE</div>
+  <div class="ov-sub">MISSION SUMMARY</div>
+  <div class="go-stats-grid">
+    <div class="go-stat-row">SCORE &nbsp;<b id="go-sc">0</b></div>
+    <div class="go-stat-row">HIGHEST WAVE &nbsp;<b id="go-lv" style="color:#4cc9f0">1</b></div>
+    <div class="go-stat-row">COINS EARNED &nbsp;<b id="go-cr" style="color:#ffd60a">0</b></div>
+    <div class="go-stat-row">XP EARNED &nbsp;<b id="go-xp" style="color:#7bf1a8">0</b></div>
+    <div class="go-stat-row">ACCURACY &nbsp;<b id="go-acc" style="color:#b197fc">0%</b></div>
+    <div class="go-stat-row">HIGH SCORE &nbsp;<b id="go-hs" style="color:#fff">0</b></div>
+  </div>
+  <button class="ov-btn" style="border-color:#ff4d6d;color:#ff4d6d;margin-top:20px" onclick="restartGame()">REBOOT</button>
+  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:12px;padding:10px 32px;font-size:11px" onclick="openStats()">VIEW STATS</button>
+</div>
+
+<!-- PAUSE MENU -->
+<div class="overlay hide" id="ov-pause">
+  <div class="ov-title" style="color:#fff;font-size:36px">PAUSED</div>
+  <div class="ov-sub">SYSTEM STANDBY</div>
+  <div class="menu-list">
+    <div class="menu-btn" style="border-color:#7bf1a8;color:#7bf1a8" onclick="resumeGame()">RESUME</div>
+    <div class="menu-btn" onclick="openStats()">STATISTICS &amp; ACHIEVEMENTS</div>
+    <div class="menu-btn" style="border-color:#ffd60a;color:#ffd60a" onclick="openMissions()">DAILY MISSIONS</div>
+    <div class="menu-btn" style="border-color:#ff4d6d;color:#ff4d6d" onclick="restartFromPause()">RESTART MISSION</div>
+    <div class="menu-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.55)" onclick="exitGame()">EXIT</div>
+  </div>
+</div>
+
+<!-- STATISTICS SCREEN -->
+<div id="stats-wrap" class="hide">
+  <div class="stats-title">STATISTICS</div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-card-label">PLAYER LEVEL</div><div class="stat-card-val" id="st-lvl" style="color:#7bf1a8">1</div></div>
+    <div class="stat-card"><div class="stat-card-label">TOTAL XP</div><div class="stat-card-val" id="st-xp" style="color:#7bf1a8">0</div></div>
+    <div class="stat-card"><div class="stat-card-label">COINS</div><div class="stat-card-val" id="st-coins" style="color:#ffd60a">0</div></div>
+    <div class="stat-card"><div class="stat-card-label">HIGH SCORE</div><div class="stat-card-val" id="st-hs">0</div></div>
+    <div class="stat-card"><div class="stat-card-label">HIGHEST WAVE</div><div class="stat-card-val" id="st-wave" style="color:#4cc9f0">1</div></div>
+    <div class="stat-card"><div class="stat-card-label">ENEMIES DESTROYED</div><div class="stat-card-val" id="st-kills">0</div></div>
+    <div class="stat-card"><div class="stat-card-label">ACCURACY</div><div class="stat-card-val" id="st-acc" style="color:#b197fc">0%</div></div>
+    <div class="stat-card"><div class="stat-card-label">TOTAL PLAY TIME</div><div class="stat-card-val" id="st-time" style="font-size:14px">0m</div></div>
+    <div class="stat-card"><div class="stat-card-label">WEAPONS UNLOCKED</div><div class="stat-card-val" id="st-weapons" style="color:#ff9f7c">1 / 3</div></div>
+  </div>
+  <div class="menu-list stats-close">
+    <div class="menu-btn" style="border-color:#ffd60a;color:#ffd60a" onclick="openAchievements()">VIEW ACHIEVEMENTS</div>
+    <div class="menu-btn" onclick="closeStats()">CLOSE</div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENTS SCREEN -->
+<div id="ach-wrap" class="hide">
+  <div class="ach-title">ACHIEVEMENTS</div>
+  <div class="ach-sub" id="ach-count">0 / 0 UNLOCKED</div>
+  <div class="ach-list" id="ach-list"></div>
+  <div class="menu-list stats-close">
+    <div class="menu-btn" onclick="closeAchievements()">CLOSE</div>
+  </div>
+</div>
+
+<!-- DAILY MISSIONS -->
+<div id="miss-wrap" class="hide">
+  <div class="miss-title">DAILY MISSIONS</div>
+  <div class="miss-sub">RESETS EVERY 24 HOURS &mdash; COMPLETE THEM FOR BONUS XP &amp; CREDITS</div>
+  <div class="miss-list" id="miss-list"></div>
+  <div class="menu-list stats-close">
+    <div class="menu-btn" onclick="closeMissions()">CLOSE</div>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div id="shop-wrap" class="hide">
+  <div class="shop-title">ARMORY</div>
+  <div class="ov-sub" style="margin:4px 0 8px">UPGRADE BETWEEN WAVES</div>
+  <div class="shop-credits">⬡ <span id="sh-cr">0</span> CREDITS</div>
+  <div class="shop-grid" id="sh-grid"></div>
+  <div class="shop-next"><button class="ov-btn" onclick="closeShop()">DEPLOY TO LEVEL <span id="sh-nextlv">2</span> →</button></div>
+</div>
+
+<!-- TUTORIAL -->
+<div class="tut-overlay hide" id="tut-overlay">
+  <div id="tut-spotlight"></div>
+  <div id="tut-card">
+    <div class="tut-dots" id="tut-dots"></div>
+    <div class="tut-kicker" id="tut-kicker">INCOMING TRANSMISSION</div>
+    <div class="tut-title" id="tut-title">TITLE</div>
+    <div class="tut-body" id="tut-body">Body text.</div>
+    <div class="tut-examples" id="tut-examples"></div>
+    <button class="ov-btn tut-next" id="tut-next">CONTINUE →</button>
+    <span class="tut-skip" id="tut-skip">SKIP TUTORIAL</span>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ─── Canvas setup ────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W = 0, H = 0;
+
+function resize(){
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Constants ────────────────────────────────────────────────
+const COL = {
+  INT:   { main:'#b197fc', gR:'rgba(177,151,252,', dark:'#5b21b6' },
+  FLOAT: { main:'#ff9f7c', gR:'rgba(255,159,124,', dark:'#9a3412' },
+  STR:   { main:'#ffd60a', gR:'rgba(255,214,10,',  dark:'#92400e' },
+  BOOL:  { main:'#4cc9f0', gR:'rgba(76,201,240,',  dark:'#075985' },
+};
+const TYPES = ['INT','FLOAT','STR','BOOL'];
+
+const EXPR = {
+  INT:   ['42','0','-7','255','1000','len([1,2])','2**8','int(3.9)','abs(-5)','100'],
+  FLOAT: ['3.14','0.5','-1.2','2.718','float(3)','1/3','9.81','0.001','1.5'],
+  STR:   ["'hi'",'"py"',"'OK'",'str(10)','f"{x}"',"'ab'+'c'",'chr(65)',"'Z'"],
+  BOOL:  ['True','False','not 0','1==1','bool(0)','3>2','None is None','0<1'],
+};
+
+// ─── Tutorial content ──────────────────────────────────────────
+const TYPE_INFO = {
+  INT:   { label:'INTEGER', color:'#b197fc',
+           desc:'Whole numbers with no decimal point. Load INT ammo whenever a crystal\u2019s expression evaluates to a whole number.',
+           examples:['42','-7','255','len([1,2])'] },
+  FLOAT: { label:'FLOAT', color:'#ff9f7c',
+           desc:'Numbers that carry a decimal point. Load FLOAT ammo whenever the expression evaluates to a fractional value.',
+           examples:['3.14','0.5','9.81','1/3'] },
+  STR:   { label:'STRING', color:'#ffd60a',
+           desc:'Text, always wrapped in quotes. Load STR ammo whenever the expression evaluates to text.',
+           examples:["'hi'",'"py"',"str(10)"] },
+  BOOL:  { label:'BOOLEAN', color:'#4cc9f0',
+           desc:'Only ever True or False. Load BOOL ammo whenever the expression evaluates to a boolean.',
+           examples:['True','False','3>2'] },
+};
+
+function typesForLevel(l){
+  if(l<=1) return ['INT'];
+  if(l<=2) return ['INT','FLOAT'];
+  if(l<=3) return ['INT','FLOAT','STR'];
+  return ['INT','FLOAT','STR','BOOL'];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PROGRESSION SYSTEM — save data, RN bridge, XP, achievements
+// ═══════════════════════════════════════════════════════════════
+
+// ─── XP curve ─────────────────────────────────────────────────
+function xpNeededFor(level){ return 100 + (level-1)*60; }
+
+// ─── Achievement definitions ───────────────────────────────────
+const ACHIEVEMENTS = [
+  { id:'first_blood',   name:'FIRST BLOOD',      desc:'Destroy your first data crystal.',        xp:20,  icon:'⚡', check:s=>s.totalEnemiesDestroyed>=1 },
+  { id:'centurion',     name:'CENTURION',        desc:'Destroy 100 crystals total.',              xp:60,  icon:'💯', check:s=>s.totalEnemiesDestroyed>=100 },
+  { id:'crystal_crusher',name:'CRYSTAL CRUSHER', desc:'Destroy 500 crystals total.',              xp:150, icon:'💥', check:s=>s.totalEnemiesDestroyed>=500 },
+  { id:'wave_5',        name:'HOLDING THE LINE', desc:'Reach wave 5.',                            xp:40,  icon:'🌊', check:s=>s.highestWave>=5 },
+  { id:'wave_10',       name:'DEEP SPACE',       desc:'Reach wave 10.',                           xp:80,  icon:'🚀', check:s=>s.highestWave>=10 },
+  { id:'wave_20',       name:'VOID RUNNER',      desc:'Reach wave 20.',                           xp:200, icon:'🌌', check:s=>s.highestWave>=20 },
+  { id:'sharpshooter',  name:'SHARPSHOOTER',     desc:'Reach 90% accuracy (50+ shots fired).',    xp:100, icon:'🎯', check:s=>s.totalShotsFired>=50 && s.accuracy>=90 },
+  { id:'financier',     name:'FINANCIER',        desc:'Earn 1000 total coins.',                   xp:60,  icon:'⬡', check:s=>s.lifetimeCoins>=1000 },
+  { id:'leveled_up',    name:'RISING STAR',      desc:'Reach player level 5.',                    xp:0,   icon:'⭐', check:s=>s.playerLevel>=5 },
+  { id:'arsenal',       name:'FULL ARSENAL',     desc:'Unlock every weapon.',                     xp:150, icon:'🔫', check:s=>s.unlockedWeapons.length>=SHOP_GUNS_COUNT },
+  { id:'veteran',       name:'VETERAN',          desc:'Play for a total of 30 minutes.',          xp:80,  icon:'⏱', check:s=>s.totalPlayTimeSec>=1800 },
+];
+const SHOP_GUNS_COUNT = 3; // standard, dual, rail
+
+// ─── Daily missions ─────────────────────────────────────────────
+const DAILY_MISSIONS = [
+  { id:'m_kills',   name:'CRYSTAL HUNTER',   desc:'Destroy 30 data crystals today.',              xp:100, coins:0,  target:30, get:p=>p.kills },
+  { id:'m_waves',   name:'WAVE BREAKER',     desc:'Complete 5 waves today.',                      xp:80,  coins:50, target:5,  get:p=>p.waves },
+  { id:'m_perfect', name:'PRECISION STRIKE', desc:'Clear a wave with no mistakes or breaches.',   xp:150, coins:0,  target:1,  get:p=>p.perfectWaves },
+];
+
+function todayStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function ensureDailyMissions(){
+  if(!SAVE.dailyMissions || SAVE.dailyMissions.date!==todayStr()){
+    SAVE.dailyMissions = { date:todayStr(), progress:{ kills:0, waves:0, perfectWaves:0 }, claimed:{} };
+  }
+}
+
+function checkDailyMissions(){
+  ensureDailyMissions();
+  const p=SAVE.dailyMissions.progress;
+  let any=false;
+  DAILY_MISSIONS.forEach(m=>{
+    if(!SAVE.dailyMissions.claimed[m.id] && m.get(p)>=m.target){
+      SAVE.dailyMissions.claimed[m.id]=true;
+      any=true;
+      toast('✔ MISSION COMPLETE: '+m.name,'#4cc9f0');
+      postToRN({ type:'DAILY_MISSION_COMPLETE', game:'pyro', data:{ id:m.id, name:m.name, xp:m.xp, coins:m.coins } });
+      if(m.xp>0) addXP(m.xp, true);
+      if(m.coins>0){
+        G.coins+=m.coins; SAVE.coins=G.coins; G.sessionCoins+=m.coins; SAVE.lifetimeCoins+=m.coins;
+        hudUpdate();
+      }
+    }
+  });
+  if(any) scheduleSave();
+}
+
+// ─── Default save data ──────────────────────────────────────────
+function defaultSaveData(){
+  return {
+    game:'pyro',
+    playerLevel: 1,
+    xp: 0,
+    coins: 0,
+    lifetimeCoins: 0,
+    highScore: 0,
+    highestWave: 0,
+    totalEnemiesDestroyed: 0,
+    totalShotsFired: 0,
+    totalHits: 0,
+    accuracy: 0,
+    totalPlayTimeSec: 0,
+    achievements: {},        // id -> true
+    unlockedWeapons: ['standard'],
+    equippedWeapon: 'standard',
+    resume: null,            // in-progress run snapshot, or null
+    dailyMissions: { date:null, progress:{ kills:0, waves:0, perfectWaves:0 }, claimed:{} },
+  };
+}
+let SAVE = defaultSaveData();
+
+// ─── React Native bridge ────────────────────────────────────────
+function postToRN(msg){
+  try{
+    if(window.ReactNativeWebView && window.ReactNativeWebView.postMessage){
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    }
+  }catch(err){ /* no-op if not embedded */ }
+}
+
+function buildSavePayload(){
+  SAVE.accuracy = SAVE.totalShotsFired>0 ? Math.round((SAVE.totalHits/SAVE.totalShotsFired)*1000)/10 : 0;
+  return JSON.parse(JSON.stringify(SAVE));
+}
+
+function sendSaveGame(){
+  postToRN({ type:'SAVE_GAME', game:'pyro', data:buildSavePayload() });
+}
+
+function sendGameOver(summary){
+  postToRN({ type:'GAME_OVER', game:'pyro', data:Object.assign(buildSavePayload(), { summary }) });
+}
+
+let saveDebounce=null;
+function scheduleSave(){
+  clearTimeout(saveDebounce);
+  saveDebounce=setTimeout(sendSaveGame, 400);
+}
+
+// merge incoming save data (from RN) into SAVE, guarding against bad/partial data
+function applySaveData(incoming){
+  if(!incoming || typeof incoming!=='object') return;
+  const d=defaultSaveData();
+  SAVE = {
+    game:'pyro',
+    playerLevel: Number.isFinite(incoming.playerLevel)?incoming.playerLevel:d.playerLevel,
+    xp: Number.isFinite(incoming.xp)?incoming.xp:d.xp,
+    coins: Number.isFinite(incoming.coins)?incoming.coins:d.coins,
+    lifetimeCoins: Number.isFinite(incoming.lifetimeCoins)?incoming.lifetimeCoins:d.lifetimeCoins,
+    highScore: Number.isFinite(incoming.highScore)?incoming.highScore:d.highScore,
+    highestWave: Number.isFinite(incoming.highestWave)?incoming.highestWave:d.highestWave,
+    totalEnemiesDestroyed: Number.isFinite(incoming.totalEnemiesDestroyed)?incoming.totalEnemiesDestroyed:d.totalEnemiesDestroyed,
+    totalShotsFired: Number.isFinite(incoming.totalShotsFired)?incoming.totalShotsFired:d.totalShotsFired,
+    totalHits: Number.isFinite(incoming.totalHits)?incoming.totalHits:d.totalHits,
+    accuracy: Number.isFinite(incoming.accuracy)?incoming.accuracy:d.accuracy,
+    totalPlayTimeSec: Number.isFinite(incoming.totalPlayTimeSec)?incoming.totalPlayTimeSec:d.totalPlayTimeSec,
+    achievements: (incoming.achievements && typeof incoming.achievements==='object')?incoming.achievements:d.achievements,
+    unlockedWeapons: Array.isArray(incoming.unlockedWeapons)&&incoming.unlockedWeapons.length?incoming.unlockedWeapons:d.unlockedWeapons,
+    equippedWeapon: incoming.equippedWeapon || d.equippedWeapon,
+    resume: incoming.resume || null,
+    dailyMissions: (incoming.dailyMissions && typeof incoming.dailyMissions==='object') ? incoming.dailyMissions : d.dailyMissions,
+  };
+  ensureDailyMissions();
+}
+
+let rnDataReceived=false;
+function handleRNMessage(raw){
+  if(rnDataReceived) return;
+  let parsed;
+  try{ parsed = typeof raw==='string' ? JSON.parse(raw) : raw; }catch(err){ return; }
+  if(!parsed || typeof parsed!=='object') return;
+  // accept either {type:'LOAD_GAME', data:{...}} or a raw save object
+  if(parsed.type==='LOAD_GAME' || parsed.type==='INIT_DATA' || parsed.type==='SAVE_DATA'){
+    rnDataReceived=true;
+    applySaveData(parsed.data||parsed.payload||{});
+    onSaveDataReady();
+  } else if(parsed.playerLevel!==undefined || parsed.xp!==undefined || parsed.coins!==undefined){
+    rnDataReceived=true;
+    applySaveData(parsed);
+    onSaveDataReady();
+  }
+}
+window.addEventListener('message', e=>handleRNMessage(e.data));
+document.addEventListener('message', e=>handleRNMessage(e.data));
+
+function onSaveDataReady(){
+  // reflect loaded weapons/coins into a fresh run object
+  G.coins = SAVE.coins;
+  G.ownedGuns = {}; SAVE.unlockedWeapons.forEach(w=>G.ownedGuns[w]=true);
+  G.equippedGun = SAVE.equippedWeapon; G.gun = SAVE.equippedWeapon;
+  hudUpdate(); updateXPBar();
+  const resumeBtn=document.getElementById('btn-resume');
+  if(SAVE.resume && resumeBtn) resumeBtn.classList.remove('hide');
+}
+
+// request save data as soon as the game boots; fall back to defaults if RN never answers
+postToRN({ type:'REQUEST_SAVE', game:'pyro' });
+setTimeout(()=>{ if(!rnDataReceived){ rnDataReceived=true; onSaveDataReady(); } }, 900);
+
+// ─── State ────────────────────────────────────────────────────
+let G; // game object
+function fresh(){
+  const ownedGuns={};
+  (SAVE.unlockedWeapons||['standard']).forEach(w=>ownedGuns[w]=true);
+  return {
+    phase: 'start',
+    level: 1, hp: 100, score: 0, coins: SAVE.coins||0,
+    weapon: 'INT', gun: SAVE.equippedWeapon||'standard',
+    enemies: [], bullets: [], particles: [],
+    stars: makeStars(),
+    mx: -999, my: -999,  // touch/mouse aim point
+    spawnTimer: 0, spawnInterval: 160,
+    waveCount: 0, waveTarget: 10,
+    killed: 0,
+    ownedGuns: Object.keys(ownedGuns).length?ownedGuns:{ standard:true },
+    equippedGun: SAVE.equippedWeapon||'standard',
+    frame: 0, shake: 0,
+    eid: 0,
+    levelDone: false,
+    // session-only progression counters (this run)
+    sessionXP: 0, sessionCoins: 0, sessionShots: 0, sessionHits: 0,
+    prevPhase: null,
+    // combo / perfect-wave tracking
+    combo: 0, comboMax: 0,
+    waveWrongHits: 0, waveBreach: false,
+  };
+}
+G = fresh();
+
+// ─── Stars ────────────────────────────────────────────────────
+function makeStars(){
+  const layers = [];
+  [90,50,20].forEach((n,li)=>{
+    const arr=[];
+    for(let i=0;i<n;i++) arr.push({
+      x:Math.random()*4000, y:Math.random()*3000,
+      r:[0.5,1,1.7][li], spd:[0.1,0.25,0.55][li],
+      a:0.3+Math.random()*0.65
+    });
+    layers.push(arr);
+  });
+  return layers;
+}
+
+// ─── Available types by level ─────────────────────────────────
+function avTypes(){ return typesForLevel(G.level); }
+
+// ─── Spawn enemy ──────────────────────────────────────────────
+function spawnEnemy(){
+  const types = avTypes();
+  const type  = types[Math.floor(Math.random()*types.length)];
+  const mono  = G.level >= 10;
+  const sz    = 38 + Math.random()*18;
+  const margin= sz+20;
+  const x     = margin + Math.random()*(W - margin*2);
+  const spd   = Math.min(0.45 + G.level*0.065 + Math.random()*0.25, 2.8);
+  const expr  = EXPR[type][Math.floor(Math.random()*EXPR[type].length)];
+  G.enemies.push({
+    id:G.eid++, type, mono, x, y:-sz-10, sz, spd,
+    expr, alpha:0, pulse:Math.random()*Math.PI*2,
+    flash:0, wobble:Math.random()*Math.PI*2, rot:0
+  });
+  G.waveCount++;
+}
+
+// ─── Fire bullet ──────────────────────────────────────────────
+function fire(tx, ty){
+  const ox = W/2, oy = gunY();
+  const dx=tx-ox, dy=ty-oy;
+  const d=Math.sqrt(dx*dx+dy*dy)||1;
+  const spd = G.gun==='rail' ? 22 : 13;
+  const vx=dx/d*spd, vy=dy/d*spd;
+  const mk=(offx)=>({ x:ox+offx, y:oy, vx, vy, type:G.weapon,
+    r:G.gun==='rail'?6:8, trail:[], life:1 });
+  if(G.gun==='dual'){ G.bullets.push(mk(-13),mk(13)); }
+  else               { G.bullets.push(mk(0)); }
+  SAVE.totalShotsFired++; G.sessionShots++;
+}
+
+function gunY(){ return H - 165; }
+
+// ─── Particles ────────────────────────────────────────────────
+function burst(x,y,col,n=18){
+  for(let i=0;i<n;i++){
+    const ang=(i/n)*Math.PI*2+Math.random()*0.4;
+    const spd=1.5+Math.random()*4;
+    G.particles.push({ x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+      r:1.5+Math.random()*2.5,a:1,col,life:40+Math.random()*30,ml:70 });
+  }
+}
+
+// ─── Float text ───────────────────────────────────────────────
+function floatTxt(x,y,txt,col){
+  const d=document.createElement('div');
+  d.className='ftxt'; d.style.cssText=`left:${x}px;top:${y}px;color:${col}`;
+  d.textContent=txt; document.body.appendChild(d);
+  setTimeout(()=>d.remove(),950);
+}
+
+// ─── Toast ────────────────────────────────────────────────────
+let toastTm=null;
+function toast(msg,col='#fff'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.color=col; el.classList.add('show');
+  clearTimeout(toastTm);
+  toastTm=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+// ─── HUD ──────────────────────────────────────────────────────
+function hudUpdate(){
+  document.getElementById('v-lvl').textContent=String(G.level).padStart(2,'0');
+  document.getElementById('v-hp').textContent=Math.max(0,Math.round(G.hp));
+  document.getElementById('v-sc').textContent=String(G.score).padStart(6,'0');
+  document.getElementById('v-cr').textContent=G.coins;
+  document.getElementById('hpbar').style.width=(Math.max(0,G.hp)/100*100)+'%';
+  updateXPBar();
+}
+
+// ─── XP bar / level-up ─────────────────────────────────────────
+function updateXPBar(){
+  const need=xpNeededFor(SAVE.playerLevel);
+  const badge=document.getElementById('xp-lvl-badge');
+  const fill=document.getElementById('xpbar-fill');
+  if(badge) badge.textContent='LVL '+SAVE.playerLevel;
+  if(fill) fill.style.width=Math.min(100,(SAVE.xp/need)*100)+'%';
+}
+
+function addXP(amount, silent){
+  if(amount<=0) return;
+  SAVE.xp+=amount;
+  G.sessionXP+=amount;
+  let leveledUp=false;
+  while(SAVE.xp>=xpNeededFor(SAVE.playerLevel)){
+    SAVE.xp-=xpNeededFor(SAVE.playerLevel);
+    SAVE.playerLevel++;
+    leveledUp=true;
+  }
+  updateXPBar();
+  postToRN({ type:'ADD_XP', game:'pyro', data:{ amount, xp:SAVE.xp, playerLevel:SAVE.playerLevel } });
+  if(leveledUp){
+    showLevelUp(SAVE.playerLevel);
+    scheduleSave();
+  }
+  checkAchievements();
+  if(!silent) scheduleSave();
+}
+
+function showLevelUp(lvl){
+  const el=document.getElementById('lvlup-toast');
+  document.getElementById('lu-num').textContent=lvl;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1600);
+}
+
+// ─── Achievements ───────────────────────────────────────────────
+function checkAchievements(){
+  const acc = SAVE.totalShotsFired>0 ? (SAVE.totalHits/SAVE.totalShotsFired)*100 : 0;
+  const snapshot={
+    totalEnemiesDestroyed:SAVE.totalEnemiesDestroyed,
+    highestWave:SAVE.highestWave,
+    totalShotsFired:SAVE.totalShotsFired,
+    accuracy:acc,
+    lifetimeCoins:SAVE.lifetimeCoins,
+    playerLevel:SAVE.playerLevel,
+    unlockedWeapons:SAVE.unlockedWeapons,
+    totalPlayTimeSec:SAVE.totalPlayTimeSec,
+  };
+  ACHIEVEMENTS.forEach(a=>{
+    if(!SAVE.achievements[a.id] && a.check(snapshot)){
+      SAVE.achievements[a.id]=true;
+      toast('🏆 '+a.name+' UNLOCKED','#ffd60a');
+      postToRN({ type:'UNLOCK_ACHIEVEMENT', game:'pyro', data:{ id:a.id, name:a.name, xp:a.xp } });
+      if(a.xp>0) addXP(a.xp, true);
+      scheduleSave();
+    }
+  });
+}
+
+// ─── Weapon select ────────────────────────────────────────────
+function selW(t){
+  if(G.phase!=='play') return;
+  G.weapon=t;
+  TYPES.forEach(k=>{
+    const el=document.getElementById('wp-'+k);
+    const c=COL[k];
+    if(k===t){
+      el.classList.add('active');
+      el.style.borderColor=c.main+'88';
+      el.style.boxShadow=`0 0 20px ${c.main}44`;
+    } else {
+      el.classList.remove('active');
+      el.style.borderColor='rgba(255,255,255,0.12)';
+      el.style.boxShadow='none';
+    }
+  });
+}
+window.selW=selW;
+
+// ═══════════════════════════════════════════════════════════════
+//  TUTORIAL ENGINE
+// ═══════════════════════════════════════════════════════════════
+let tutQueue = [];
+let tutIdx = 0;
+let tutOnDone = null;
+
+function tutRectFor(target, pad){
+  pad = pad==null ? 8 : pad;
+  if(typeof target === 'string'){
+    const el = document.getElementById(target);
+    const r = el.getBoundingClientRect();
+    return { x:r.left-pad, y:r.top-pad, w:r.width+pad*2, h:r.height+pad*2 };
+  }
+  return target; // already a {x,y,w,h} rect
+}
+
+function renderTutStep(){
+  const step = tutQueue[tutIdx];
+  const spot = document.getElementById('tut-spotlight');
+  const card = document.getElementById('tut-card');
+
+  // position spotlight (or full-dim if no highlight target)
+  let rect = null;
+  if(step.highlight){
+    rect = tutRectFor(step.highlight, step.pad);
+    spot.style.left   = rect.x+'px';
+    spot.style.top    = rect.y+'px';
+    spot.style.width  = rect.w+'px';
+    spot.style.height = rect.h+'px';
+    spot.style.setProperty('--tut-col', step.color || '#4cc9f0');
+    spot.classList.add('pulse');
+  } else {
+    spot.style.left   = '50%';
+    spot.style.top    = '50%';
+    spot.style.width  = '0px';
+    spot.style.height = '0px';
+    spot.classList.remove('pulse');
+  }
+
+  // fade card out, swap content, fade back in
+  card.style.opacity = '0';
+  setTimeout(()=>{
+    document.getElementById('tut-kicker').textContent = step.kicker || '';
+    const titleEl = document.getElementById('tut-title');
+    titleEl.textContent = step.title || '';
+    titleEl.style.color = step.color || '#fff';
+    document.getElementById('tut-body').textContent = step.body || '';
+
+    const exWrap = document.getElementById('tut-examples');
+    exWrap.innerHTML = '';
+    if(step.examples){
+      step.examples.forEach(ex=>{
+        const s = document.createElement('span');
+        s.className = 'tut-ex';
+        s.textContent = ex;
+        s.style.color = step.color || '#fff';
+        s.style.borderColor = (step.color || '#fff') + '55';
+        exWrap.appendChild(s);
+      });
+    }
+
+    const dotsWrap = document.getElementById('tut-dots');
+    dotsWrap.innerHTML = '';
+    if(tutQueue.length > 1){
+      tutQueue.forEach((_,i)=>{
+        const d = document.createElement('div');
+        d.className = 'tut-dot' + (i===tutIdx ? ' active' : '');
+        dotsWrap.appendChild(d);
+      });
+    }
+
+    document.getElementById('tut-next').textContent =
+      (tutIdx === tutQueue.length-1) ? (step.finalLabel || 'GOT IT →') : 'CONTINUE →';
+
+    // place the card clear of the spotlight
+    let top;
+    if(!rect){
+      top = H*0.5 - 120;
+    } else if(rect.y + rect.h/2 < H*0.5){
+      top = Math.min(H - 300, H - 250);
+    } else {
+      top = 90;
+    }
+    card.style.top = top+'px';
+
+    card.style.opacity = '1';
+  }, 180);
+}
+
+function startTutorialQueue(steps, onDone){
+  tutQueue = steps; tutIdx = 0; tutOnDone = onDone;
+  const ov = document.getElementById('tut-overlay');
+  ov.classList.remove('hide');
+  requestAnimationFrame(()=> ov.classList.add('show'));
+  renderTutStep();
+}
+
+function nextTutStep(){
+  if(tutIdx < tutQueue.length-1){
+    tutIdx++;
+    renderTutStep();
+  } else {
+    const ov = document.getElementById('tut-overlay');
+    ov.classList.remove('show');
+    setTimeout(()=>{
+      ov.classList.add('hide');
+      const cb = tutOnDone; tutOnDone = null;
+      if(cb) cb();
+    }, 300);
+  }
+}
+function skipTutorial(){
+  tutIdx = tutQueue.length - 1;
+  nextTutStep();
+}
+document.getElementById('tut-next').addEventListener('click', nextTutStep);
+document.getElementById('tut-skip').addEventListener('click', skipTutorial);
+
+// ─── Draw: background ─────────────────────────────────────────
+function drawBG(){
+  ctx.fillStyle='#02010a'; ctx.fillRect(0,0,W,H);
+  // nebula blobs
+  [[0.15,0.25,'rgba(55,10,85,0.22)'],[0.82,0.3,'rgba(0,25,75,0.18)'],[0.5,0.65,'rgba(8,45,55,0.15)']].forEach(([rx,ry,c])=>{
+    const g=ctx.createRadialGradient(W*rx,H*ry,0,W*rx,H*ry,W*0.38);
+    g.addColorStop(0,c); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  });
+}
+
+function drawStars(){
+  G.stars.forEach((layer)=>{
+    layer.forEach(s=>{
+      s.y+=s.spd;
+      if(s.y>H+4) s.y=-4;
+      ctx.beginPath();
+      ctx.arc(s.x%W,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${s.a})`;
+      ctx.fill();
+    });
+  });
+}
+
+// ─── Draw: gun ────────────────────────────────────────────────
+function drawGun(){
+  const cx=W/2, cy=gunY();
+  const col=COL[G.weapon];
+  const t=G.frame;
+
+  // platform glow
+  const pg=ctx.createRadialGradient(cx,cy+10,0,cx,cy+10,160);
+  pg.addColorStop(0,col.gR+'0.18)'); pg.addColorStop(1,'transparent');
+  ctx.fillStyle=pg; ctx.fillRect(cx-160,cy-20,320,80);
+
+  ctx.save();
+  ctx.translate(cx,cy);
+
+  // === BASE PLATE ===
+  // Main hexagonal mounting platform
+  ctx.beginPath();
+  ctx.moveTo(-75,-6); ctx.lineTo(75,-6);
+  ctx.lineTo(84,4); ctx.lineTo(75,16);
+  ctx.lineTo(-75,16); ctx.lineTo(-84,4);
+  ctx.closePath();
+  const bGrad=ctx.createLinearGradient(0,-6,0,16);
+  bGrad.addColorStop(0,'#222235'); bGrad.addColorStop(1,'#0c0c1a');
+  ctx.fillStyle=bGrad; ctx.fill();
+  ctx.strokeStyle=col.gR+'0.35)'; ctx.lineWidth=1; ctx.stroke();
+
+  // Tech panel details on base
+  [-56,-32,-8,16,40].forEach(px=>{
+    ctx.beginPath(); ctx.rect(px,0,18,9);
+    ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=0.5; ctx.stroke();
+    // small LED
+    const ledA=0.4+0.6*((t*0.04+px*0.02)%1);
+    ctx.beginPath(); ctx.arc(px+9,4.5,1.5,0,Math.PI*2);
+    ctx.fillStyle=col.gR+ledA+')'; ctx.fill();
+  });
+
+  // === MAIN HOUSING ===
+  // Outer housing shell
+  const hGrad=ctx.createLinearGradient(-26,-38,26,-38);
+  hGrad.addColorStop(0,'#18182a'); hGrad.addColorStop(0.5,'#2c2c46'); hGrad.addColorStop(1,'#18182a');
+  ctx.beginPath(); ctx.roundRect(-26,-40,52,34,7);
+  ctx.fillStyle=hGrad; ctx.fill();
+  ctx.strokeStyle=col.gR+'0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Housing side vents
+  for(let i=0;i<4;i++){
+    ctx.beginPath(); ctx.rect(-24,-36+i*8,6,5);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=0.5; ctx.stroke();
+    ctx.beginPath(); ctx.rect(18,-36+i*8,6,5);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=0.5; ctx.stroke();
+  }
+
+  // === BARREL ASSEMBLY ===
+  // Outer barrel jacket
+  const bjGrad=ctx.createLinearGradient(-10,0,10,0);
+  bjGrad.addColorStop(0,'#111122'); bjGrad.addColorStop(0.5,'#1e1e34'); bjGrad.addColorStop(1,'#111122');
+  ctx.beginPath(); ctx.roundRect(-10,-40,20,38,4);
+  ctx.fillStyle=bjGrad; ctx.fill();
+  ctx.strokeStyle=col.gR+'0.55)'; ctx.lineWidth=1.2; ctx.stroke();
+
+  // Inner barrel bore
+  ctx.beginPath(); ctx.roundRect(-5,-38,10,36,2);
+  ctx.fillStyle='#060610'; ctx.fill();
+
+  // Barrel rings (detail)
+  [-34,-26,-18,-10].forEach(ry=>{
+    ctx.beginPath(); ctx.rect(-11,ry,22,3);
+    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=0.5; ctx.stroke();
+  });
+
+  // Muzzle crown
+  ctx.beginPath(); ctx.roundRect(-12,-42,24,6,3);
+  const mGrad=ctx.createLinearGradient(-12,-42,12,-42);
+  mGrad.addColorStop(0,'#1a1a2e'); mGrad.addColorStop(0.5,'#31315a'); mGrad.addColorStop(1,'#1a1a2e');
+  ctx.fillStyle=mGrad; ctx.fill();
+  ctx.strokeStyle=col.gR+'0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Plasma core glow at muzzle
+  const mPulse=0.55+0.45*Math.sin(t*0.1);
+  ctx.beginPath(); ctx.arc(0,-39,4.5,0,Math.PI*2);
+  ctx.fillStyle=col.gR+mPulse+')';
+  ctx.shadowColor=col.main; ctx.shadowBlur=18*mPulse;
+  ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-39,2.5,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.shadowBlur=10; ctx.fill();
+  ctx.shadowBlur=0;
+
+  // === SIDE FINS ===
+  [[-1,1]].forEach(([_,side])=>{
+    const sx=side*32;
+    ctx.beginPath();
+    ctx.moveTo(sx,-32); ctx.lineTo(sx+side*20,-22);
+    ctx.lineTo(sx+side*22,-8); ctx.lineTo(sx+side*12,2);
+    ctx.lineTo(sx,0); ctx.closePath();
+    const fg=ctx.createLinearGradient(sx,0,sx+side*22,0);
+    fg.addColorStop(0,'#20203a'); fg.addColorStop(1,'#0e0e1e');
+    ctx.fillStyle=fg; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=0.5; ctx.stroke();
+    // fin ridge
+    ctx.beginPath();
+    ctx.moveTo(sx+side*4,-28); ctx.lineTo(sx+side*16,-18);
+    ctx.strokeStyle=col.gR+'0.25)'; ctx.lineWidth=1; ctx.stroke();
+  });
+  // left fin manually
+  ctx.beginPath();
+  ctx.moveTo(-32,-32); ctx.lineTo(-52,-22);
+  ctx.lineTo(-54,-8); ctx.lineTo(-44,2);
+  ctx.lineTo(-32,0); ctx.closePath();
+  const fg2=ctx.createLinearGradient(-32,0,-54,0);
+  fg2.addColorStop(0,'#20203a'); fg2.addColorStop(1,'#0e0e1e');
+  ctx.fillStyle=fg2; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=0.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-36,-28); ctx.lineTo(-50,-18);
+  ctx.strokeStyle=col.gR+'0.25)'; ctx.lineWidth=1; ctx.stroke();
+
+  // === ENERGY COILS ===
+  for(let i=0;i<5;i++){
+    const coilY=-38+i*7;
+    const ga=0.2+0.8*((t*0.06+i*0.4)%1);
+    ctx.beginPath(); ctx.rect(-30,coilY,6,4);
+    ctx.fillStyle=col.gR+ga+')'; ctx.fill();
+    ctx.beginPath(); ctx.rect(24,coilY,6,4);
+    ctx.fillStyle=col.gR+ga+')'; ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ─── Draw: aim line ───────────────────────────────────────────
+function drawAim(){
+  if(G.mx<0) return;
+  const cx=W/2, cy=gunY()-39; // muzzle tip
+  const col=COL[G.weapon];
+  const dx=G.mx-cx, dy=G.my-cy;
+  const d=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=dx/d, ny=dy/d;
+
+  ctx.save();
+  // dashed guide
+  ctx.globalAlpha=0.4;
+  ctx.strokeStyle=col.main;
+  ctx.lineWidth=1.2;
+  ctx.setLineDash([7,9]);
+  ctx.shadowColor=col.main; ctx.shadowBlur=6;
+  ctx.beginPath();
+  ctx.moveTo(cx+nx*44,cy+ny*44);
+  ctx.lineTo(G.mx, G.my);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // crosshair target ring
+  ctx.globalAlpha=0.85;
+  ctx.strokeStyle=col.main;
+  ctx.lineWidth=1.5;
+  ctx.shadowBlur=16; ctx.shadowColor=col.main;
+  ctx.beginPath(); ctx.arc(G.mx,G.my,14,0,Math.PI*2); ctx.stroke();
+  // ticks
+  ctx.beginPath();
+  ctx.moveTo(G.mx-21,G.my); ctx.lineTo(G.mx-16,G.my);
+  ctx.moveTo(G.mx+16,G.my); ctx.lineTo(G.mx+21,G.my);
+  ctx.moveTo(G.mx,G.my-21); ctx.lineTo(G.mx,G.my-16);
+  ctx.moveTo(G.mx,G.my+16); ctx.lineTo(G.mx,G.my+21);
+  ctx.stroke();
+  // dot
+  ctx.beginPath(); ctx.arc(G.mx,G.my,3,0,Math.PI*2);
+  ctx.fillStyle=col.main; ctx.shadowBlur=12; ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw: enemy spaceship ────────────────────────────────────
+function drawEnemy(e){
+  const t=G.frame;
+  const col=e.mono?{main:'#ccd6f6',gR:'rgba(200,210,250,'}:COL[e.type];
+  const pulse=0.65+0.35*Math.sin(t*0.07+e.pulse);
+  const wob=Math.sin(t*0.033+e.wobble)*3.5;
+  const s=e.sz;
+  e.rot+=0.008;
+
+  ctx.save();
+  ctx.translate(e.x+wob, e.y);
+  ctx.globalAlpha=Math.min(1,e.alpha);
+  if(e.flash>0){ ctx.filter=`brightness(${1+e.flash*2.5})`; }
+
+  // ── OUTER FORCEFIELD ──
+  ctx.beginPath(); ctx.arc(0,0,s+14,0,Math.PI*2);
+  const fg=ctx.createRadialGradient(0,0,s,0,0,s+14);
+  fg.addColorStop(0,'transparent');
+  fg.addColorStop(0.6,col.gR+(0.06*pulse)+')');
+  fg.addColorStop(1,col.gR+(0.22*pulse)+')');
+  ctx.fillStyle=fg; ctx.fill();
+  ctx.strokeStyle=col.gR+(0.35*pulse)+')';
+  ctx.lineWidth=1.2; ctx.stroke();
+
+  // ── HULL: rotating octagon ──
+  ctx.save(); ctx.rotate(e.rot);
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const ang=(i/8)*Math.PI*2;
+    const r2=i%2===0?s:s*0.80;
+    i===0?ctx.moveTo(Math.cos(ang)*r2,Math.sin(ang)*r2)
+         :ctx.lineTo(Math.cos(ang)*r2,Math.sin(ang)*r2);
+  }
+  ctx.closePath();
+  const hg=ctx.createRadialGradient(0,-s*0.15,0,0,0,s);
+  hg.addColorStop(0,col.gR+'0.28)');
+  hg.addColorStop(0.55,'rgba(8,6,18,0.94)');
+  hg.addColorStop(1,'rgba(3,2,10,0.98)');
+  ctx.fillStyle=hg; ctx.fill();
+  ctx.strokeStyle=col.main;
+  ctx.lineWidth=2;
+  ctx.shadowColor=col.main; ctx.shadowBlur=10*pulse;
+  ctx.stroke();
+  ctx.restore(); // un-rotate
+
+  // ── INNER RING (counter-rotate) ──
+  ctx.save(); ctx.rotate(-e.rot*0.6);
+  ctx.beginPath(); ctx.arc(0,0,s*0.6,0,Math.PI*2);
+  ctx.strokeStyle=col.gR+(0.55*pulse)+')';
+  ctx.lineWidth=1; ctx.shadowBlur=6; ctx.stroke();
+  // inner ring notches
+  for(let i=0;i<6;i++){
+    const ang=(i/6)*Math.PI*2;
+    const ir=s*0.6;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ang)*ir, Math.sin(ang)*ir,2.5,0,Math.PI*2);
+    ctx.fillStyle=col.main; ctx.shadowBlur=8*pulse; ctx.fill();
+  }
+  ctx.restore();
+
+  // ── SPOKES ──
+  for(let i=0;i<4;i++){
+    const ang=(i/4)*Math.PI*2+e.rot*0.4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang)*s*0.22,Math.sin(ang)*s*0.22);
+    ctx.lineTo(Math.cos(ang)*s*0.58,Math.sin(ang)*s*0.58);
+    ctx.strokeStyle=col.gR+'0.38)'; ctx.lineWidth=1; ctx.shadowBlur=4; ctx.stroke();
+  }
+
+  // ── THRUSTERS at bottom ──
+  for(let i=0;i<3;i++){
+    const ang=Math.PI/2 + (i-1)*0.55;
+    const tr=s*0.75;
+    const tx=Math.cos(ang)*tr, ty=Math.sin(ang)*tr;
+    const thrA=0.3+0.7*((t*0.07+i*0.6)%1);
+    ctx.beginPath(); ctx.arc(tx,ty,4.5,0,Math.PI*2);
+    ctx.fillStyle=col.gR+thrA+')';
+    ctx.shadowColor=col.main; ctx.shadowBlur=14*thrA; ctx.fill();
+    // thruster exhaust
+    ctx.beginPath(); ctx.arc(tx,ty+8,2,0,Math.PI*2);
+    ctx.fillStyle=col.gR+(thrA*0.4)+')'; ctx.shadowBlur=8; ctx.fill();
+  }
+
+  // ── COCKPIT window ──
+  ctx.beginPath(); ctx.ellipse(0,-s*0.18,s*0.22,s*0.16,0,0,Math.PI*2);
+  ctx.fillStyle=col.gR+(0.15)+')';
+  ctx.strokeStyle=col.gR+(0.6*pulse)+')';
+  ctx.lineWidth=1.5; ctx.shadowBlur=10; ctx.fill(); ctx.stroke();
+
+  // ── EXPRESSION TEXT ──
+  ctx.shadowBlur=0; ctx.filter='none';
+  const fs=Math.min(20,s*0.65);
+  ctx.font=`900 ${fs}px 'Courier New',monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  // shadow for legibility
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillText(e.expr,1,1);
+  // glow
+  ctx.save();
+  ctx.shadowColor=col.main; ctx.shadowBlur=14;
+  ctx.fillStyle=e.flash>0?'#fff':col.main;
+  ctx.fillText(e.expr,0,0);
+  ctx.globalAlpha=0.45;
+  ctx.fillText(e.expr,0,0);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ─── Draw: bullet ─────────────────────────────────────────────
+function drawBullet(b){
+  const col=COL[b.type];
+  ctx.save();
+  // trail
+  b.trail.forEach((p,i)=>{
+    const pct=i/b.trail.length;
+    ctx.beginPath(); ctx.arc(p.x,p.y,b.r*pct*0.65,0,Math.PI*2);
+    ctx.fillStyle=col.gR+(pct*0.38)+')'; ctx.fill();
+  });
+  // outer glow
+  const og=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r+7);
+  og.addColorStop(0,col.gR+'0.55)'); og.addColorStop(1,'transparent');
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r+7,0,Math.PI*2);
+  ctx.fillStyle=og; ctx.fill();
+  // sphere
+  const sg=ctx.createRadialGradient(b.x-b.r*0.3,b.y-b.r*0.3,0,b.x,b.y,b.r);
+  sg.addColorStop(0,'#ffffff'); sg.addColorStop(0.35,col.main); sg.addColorStop(1,col.gR+'0.4)');
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+  ctx.fillStyle=sg;
+  ctx.shadowColor=col.main; ctx.shadowBlur=22;
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw: particle ───────────────────────────────────────────
+function drawParticle(p){
+  ctx.save();
+  ctx.globalAlpha=p.a;
+  ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+  ctx.fillStyle=p.col; ctx.shadowColor=p.col; ctx.shadowBlur=8; ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw: danger zone ────────────────────────────────────────
+function drawDanger(){
+  const y=H-160;
+  ctx.save();
+  ctx.globalAlpha=0.35+0.2*Math.sin(G.frame*0.06);
+  ctx.strokeStyle='#ff4d6d'; ctx.lineWidth=1;
+  ctx.setLineDash([6,8]);
+  ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font='700 9px Courier New'; ctx.fillStyle='#ff4d6d';
+  ctx.textAlign='left'; ctx.fillText('BREACH BOUNDARY',12,y-6);
+  ctx.restore();
+}
+
+// ─── Collisions ───────────────────────────────────────────────
+function collide(){
+  const dangerY=H-160;
+  // bullet vs enemy
+  for(let bi=G.bullets.length-1;bi>=0;bi--){
+    const b=G.bullets[bi];
+    let hit=false;
+    for(let ei=G.enemies.length-1;ei>=0;ei--){
+      const e=G.enemies[ei];
+      const dx=b.x-e.x, dy=b.y-e.y;
+      if(Math.sqrt(dx*dx+dy*dy)<e.sz+b.r-4){
+        const correct=e.mono||(b.type===e.type);
+        if(correct){
+          burst(e.x,e.y,COL[e.type].main,22);
+          G.coins+=10; G.score+=50+G.level*10;
+          floatTxt(e.x,e.y-20,'+10 ⬡','#ffd60a');
+          floatTxt(e.x,e.y-38,'+'+( 50+G.level*10),'#b197fc');
+          G.enemies.splice(ei,1);
+          // progression tracking
+          SAVE.totalHits++; G.sessionHits++;
+          SAVE.totalEnemiesDestroyed++;
+          SAVE.lifetimeCoins+=10; G.sessionCoins+=10;
+          SAVE.coins=G.coins;
+          if(G.score>SAVE.highScore) SAVE.highScore=G.score;
+          addXP(5);
+
+          // combo tracking
+          G.combo=(G.combo||0)+1;
+          if(G.combo>G.comboMax) G.comboMax=G.combo;
+          if(G.combo>=2){
+            const comboBonus=Math.min(G.combo,10)*2;
+            addXP(comboBonus,true);
+            floatTxt(e.x,e.y-56,G.combo+'x COMBO +'+comboBonus,'#ffd60a');
+            showCombo(G.combo);
+          }
+
+          // daily mission progress
+          ensureDailyMissions();
+          SAVE.dailyMissions.progress.kills++;
+          checkDailyMissions();
+
+          checkAchievements();
+        } else {
+          G.hp=Math.max(0,G.hp-15);
+          G.shake=10;
+          e.flash=8;
+          burst(e.x,e.y,'#ff4d6d',10);
+          floatTxt(e.x,e.y-20,'WRONG! -15','#ff4d6d');
+          toast('⚠ WRONG AMMO TYPE','#ff4d6d');
+          G.combo=0; hideCombo();
+          G.waveWrongHits=(G.waveWrongHits||0)+1;
+        }
+        hit=true; break;
+      }
+    }
+    if(hit) G.bullets.splice(bi,1);
+  }
+  // enemy breach
+  for(let ei=G.enemies.length-1;ei>=0;ei--){
+    const e=G.enemies[ei];
+    if(e.y-e.sz>dangerY){
+      G.hp=Math.max(0,G.hp-20); G.shake=12;
+      burst(e.x,dangerY,'#ff4d6d',14);
+      floatTxt(e.x,dangerY-10,'BREACH -20','#ff4d6d');
+      G.enemies.splice(ei,1);
+      G.combo=0; hideCombo();
+      G.waveBreach=true;
+    }
+  }
+}
+
+// ─── Level end check ──────────────────────────────────────────
+function checkLevel(){
+  if(!G.levelDone && G.waveCount>=G.waveTarget && G.enemies.length===0 && G.bullets.length===0){
+    G.levelDone=true;
+    G.coins+=200; G.score+=200+G.level*50;
+    SAVE.lifetimeCoins+=200; G.sessionCoins+=200;
+    SAVE.coins=G.coins;
+    if(G.score>SAVE.highScore) SAVE.highScore=G.score;
+    if(G.level>SAVE.highestWave) SAVE.highestWave=G.level;
+    toast('LEVEL CLEAR  +200 ⬡','#4cc9f0');
+    addXP(50+G.level*5);
+
+    const perfect = (G.waveWrongHits||0)===0 && !G.waveBreach;
+    if(perfect){
+      G.coins+=30; G.score+=75;
+      SAVE.lifetimeCoins+=30; G.sessionCoins+=30;
+      SAVE.coins=G.coins;
+      addXP(75,true);
+      setTimeout(()=>toast('★ PERFECT WAVE   +75 XP  +30 ⬡','#7bf1a8'),900);
+      ensureDailyMissions();
+      SAVE.dailyMissions.progress.perfectWaves++;
+    }
+
+    ensureDailyMissions();
+    SAVE.dailyMissions.progress.waves++;
+    checkDailyMissions();
+
+    checkAchievements();
+    scheduleSave();
+    setTimeout(()=>{
+      G.phase='shop';
+      G.level++;
+      openShop();
+    },1600);
+  }
+}
+
+// ─── Shop ─────────────────────────────────────────────────────
+const SHOP=[
+  { id:'standard', name:'STANDARD LASER',   desc:'Single plasma bolt. Reliable.',           price:0,   type:'gun', reqLevel:1 },
+  { id:'dual',     name:'DUAL PLASMA SHOT', desc:'Two bolts side-by-side.',                 price:220, type:'gun', reqLevel:3 },
+  { id:'rail',     name:'RAILGUN',           desc:'Hyper-velocity single bolt.',             price:300, type:'gun', reqLevel:5 },
+  { id:'shield',   name:'SHIELD KIT ×1',    desc:'Restores 25 HP. One time use.',           price:150, type:'consumable' },
+];
+
+function openShop(){
+  document.getElementById('shop-wrap').classList.remove('hide');
+  document.getElementById('sh-cr').textContent=G.coins;
+  document.getElementById('sh-nextlv').textContent=G.level;
+  const grid=document.getElementById('sh-grid');
+  grid.innerHTML='';
+  SHOP.forEach(item=>{
+    const owned=!!G.ownedGuns[item.id];
+    const equipped=item.type==='gun'&&G.equippedGun===item.id;
+    const locked=item.reqLevel && SAVE.playerLevel<item.reqLevel && !owned;
+    const div=document.createElement('div');
+    div.className='sitem'+(owned&&item.type==='gun'?' owned':'')+(equipped?' equipped':'')+(locked?' weapon-locked':'');
+    let badge='';
+    if(equipped) badge='<span class="sitem-badge b-eq">EQUIPPED</span>';
+    else if(owned&&item.type==='gun') badge='<span class="sitem-badge b-owned">OWNED</span>';
+    const reqLine = locked ? `<div class="sitem-req">REQUIRES PLAYER LVL ${item.reqLevel}</div>` : '';
+    div.innerHTML=`${badge}<div class="sitem-name">${item.name}</div><div class="sitem-desc">${item.desc}</div><div class="sitem-price">${item.price===0?'DEFAULT':'⬡ '+item.price}</div>${reqLine}`;
+    div.onclick=()=>{
+      if(locked){ toast('LOCKED — REACH PLAYER LEVEL '+item.reqLevel,'#ff9f7c'); return; }
+      if(item.type==='gun'){
+        if(!owned){
+          if(G.coins<item.price){ toast('INSUFFICIENT CREDITS','#ff4d6d'); return; }
+          G.coins-=item.price; G.ownedGuns[item.id]=true;
+          if(!SAVE.unlockedWeapons.includes(item.id)) SAVE.unlockedWeapons.push(item.id);
+          postToRN({ type:'UNLOCK_WEAPON', game:'pyro', data:{ id:item.id, name:item.name } });
+          checkAchievements();
+        }
+        G.equippedGun=item.id; G.gun=item.id;
+        SAVE.coins=G.coins; SAVE.equippedWeapon=item.id;
+        toast(item.name+' EQUIPPED','#7bf1a8');
+        scheduleSave();
+      } else {
+        if(G.coins<item.price){ toast('INSUFFICIENT CREDITS','#ff4d6d'); return; }
+        G.coins-=item.price; G.hp=Math.min(100,G.hp+25);
+        SAVE.coins=G.coins;
+        toast('SHIELD KIT +25 HP','#7bf1a8');
+        scheduleSave();
+      }
+      openShop();
+    };
+    grid.appendChild(div);
+  });
+}
+
+function closeShop(){
+  document.getElementById('shop-wrap').classList.add('hide');
+  G.waveTarget=10+G.level*2;
+  G.waveCount=0; G.killed=0; G.levelDone=false;
+  G.spawnInterval=Math.max(55,160-G.level*12);
+  G.spawnTimer=0;
+  G.waveWrongHits=0; G.waveBreach=false;
+  hudUpdate();
+
+  // does this level introduce a brand-new datatype?
+  const prevTypes = typesForLevel(G.level-1);
+  const curTypes  = typesForLevel(G.level);
+  const newType   = curTypes.find(t=>!prevTypes.includes(t));
+
+  if(newType){
+    const info = TYPE_INFO[newType];
+    G.phase='tutorial';
+    startTutorialQueue([
+      {
+        kicker:'NEW SIGNAL DETECTED',
+        title: info.label+' TYPE ONLINE',
+        body: info.desc,
+        color: info.color,
+        examples: info.examples,
+        highlight: 'wp-'+newType,
+        finalLabel:'CONTINUE →'
+      }
+    ], ()=>{ G.phase='play'; hudUpdate(); });
+  } else {
+    G.phase='play';
+  }
+}
+window.closeShop=closeShop;
+
+// ─── Start / Restart ──────────────────────────────────────────
+function startGame(){
+  document.getElementById('ov-start').classList.add('hide');
+  SAVE.resume=null; scheduleSave();
+  G=fresh();
+  G.phase='tutorial';
+  const dangerY = H-160;
+  startTutorialQueue([
+    {
+      kicker:'INCOMING TRANSMISSION',
+      title:'SECTOR BREACH',
+      body:'Alien data crystals are inbound. Each crystal displays a Python expression. Your job: work out what data type it evaluates to.',
+      color:'#4cc9f0'
+    },
+    {
+      kicker:'WARNING',
+      title:'THE BOUNDARY',
+      body:"Let a crystal cross the red line and it breaches your hull for -20 HP. Don't let them through.",
+      color:'#ff4d6d',
+      highlight:{x:0,y:dangerY-18,w:W,h:36}, pad:0
+    },
+    {
+      kicker:'LOADOUT',
+      title:'YOUR ARSENAL',
+      body:'These are your ammo types. Tap a pod to load that type before you fire at a crystal.',
+      color:'#fff',
+      highlight:'wbar'
+    },
+    {
+      kicker:'AMMO TYPE 1 OF 4',
+      title: TYPE_INFO.INT.label+' LOADED',
+      body: TYPE_INFO.INT.desc,
+      color: TYPE_INFO.INT.color,
+      examples: TYPE_INFO.INT.examples,
+      highlight:'wp-INT',
+      finalLabel:'LAUNCH WAVE 1 →'
+    },
+  ], ()=>{ G.phase='play'; hudUpdate(); });
+}
+window.startGame=startGame;
+
+function restartGame(){
+  document.getElementById('ov-dead').classList.add('hide');
+  SAVE.resume=null;
+  G=fresh();
+  G.phase='play';
+  G.waveTarget=10;
+  G.spawnInterval=160;
+  selW('INT');
+  hudUpdate();
+  scheduleSave();
+}
+window.restartGame=restartGame;
+
+// ─── Resume a saved in-progress run ────────────────────────────
+function resumeSavedRun(){
+  if(!SAVE.resume) return;
+  document.getElementById('ov-start').classList.add('hide');
+  const r=SAVE.resume;
+  G=fresh();
+  G.level=r.level||1; G.hp=r.hp!=null?r.hp:100; G.score=r.score||0;
+  G.waveTarget=r.waveTarget||(10+G.level*2);
+  G.waveCount=r.waveCount||0; G.killed=r.killed||0;
+  G.weapon=r.weapon||'INT'; G.gun=r.gun||G.gun; G.equippedGun=r.gun||G.equippedGun;
+  G.spawnInterval=Math.max(55,160-G.level*12);
+  G.phase='play';
+  selW(G.weapon);
+  hudUpdate();
+  toast('MISSION RESUMED','#7bf1a8');
+}
+window.resumeSavedRun=resumeSavedRun;
+
+// ─── Pause / Resume / Exit ──────────────────────────────────────
+function pauseGame(){
+  if(G.phase!=='play') return;
+  G.prevPhase='play';
+  G.phase='paused';
+  document.getElementById('ov-pause').classList.remove('hide');
+  captureResumeSnapshot();
+  postToRN({ type:'GAME_PAUSED', game:'pyro', data:buildSavePayload() });
+  scheduleSave();
+}
+window.pauseGame=pauseGame;
+
+function resumeGame(){
+  document.getElementById('ov-pause').classList.add('hide');
+  G.phase='play';
+  postToRN({ type:'GAME_RESUMED', game:'pyro', data:buildSavePayload() });
+}
+window.resumeGame=resumeGame;
+
+function captureResumeSnapshot(){
+  SAVE.resume={
+    level:G.level, hp:G.hp, score:G.score,
+    waveTarget:G.waveTarget, waveCount:G.waveCount, killed:G.killed,
+    weapon:G.weapon, gun:G.gun,
+  };
+}
+
+function restartFromPause(){
+  document.getElementById('ov-pause').classList.add('hide');
+  document.getElementById('ov-dead').classList.add('hide');
+  restartGame();
+}
+window.restartFromPause=restartFromPause;
+
+function exitGame(){
+  captureResumeSnapshot();
+  sendSaveGame();
+  toast('PROGRESS SAVED','#7bf1a8');
+}
+window.exitGame=exitGame;
+
+// ─── Statistics / Achievements screens ─────────────────────────
+function fmtPlayTime(sec){
+  const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
+  if(h>0) return h+'h '+m+'m';
+  if(m>0) return m+'m';
+  return sec+'s';
+}
+
+function openStats(){
+  document.getElementById('st-lvl').textContent=SAVE.playerLevel;
+  document.getElementById('st-xp').textContent=SAVE.xp+' / '+xpNeededFor(SAVE.playerLevel);
+  document.getElementById('st-coins').textContent=SAVE.coins;
+  document.getElementById('st-hs').textContent=Math.max(SAVE.highScore,G.score||0);
+  document.getElementById('st-wave').textContent=Math.max(SAVE.highestWave,G.level||1);
+  document.getElementById('st-kills').textContent=SAVE.totalEnemiesDestroyed;
+  const acc=SAVE.totalShotsFired>0?Math.round((SAVE.totalHits/SAVE.totalShotsFired)*1000)/10:0;
+  document.getElementById('st-acc').textContent=acc+'%';
+  document.getElementById('st-time').textContent=fmtPlayTime(SAVE.totalPlayTimeSec);
+  document.getElementById('st-weapons').textContent=SAVE.unlockedWeapons.length+' / '+SHOP_GUNS_COUNT;
+  document.getElementById('stats-wrap').classList.remove('hide');
+}
+window.openStats=openStats;
+
+function closeStats(){
+  document.getElementById('stats-wrap').classList.add('hide');
+}
+window.closeStats=closeStats;
+
+function openAchievements(){
+  const list=document.getElementById('ach-list');
+  list.innerHTML='';
+  let unlockedCount=0;
+  ACHIEVEMENTS.forEach(a=>{
+    const unlocked=!!SAVE.achievements[a.id];
+    if(unlocked) unlockedCount++;
+    const div=document.createElement('div');
+    div.className='ach-item'+(unlocked?' unlocked':'');
+    div.innerHTML=`<div class="ach-icon">${unlocked?a.icon:'🔒'}</div>
+      <div class="ach-info"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>
+      <div class="ach-xp">${a.xp>0?'+'+a.xp+' XP':''}</div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('ach-count').textContent=unlockedCount+' / '+ACHIEVEMENTS.length+' UNLOCKED';
+  document.getElementById('ach-wrap').classList.remove('hide');
+}
+window.openAchievements=openAchievements;
+
+function closeAchievements(){
+  document.getElementById('ach-wrap').classList.add('hide');
+}
+window.closeAchievements=closeAchievements;
+
+function openMissions(){
+  ensureDailyMissions();
+  const p=SAVE.dailyMissions.progress;
+  const list=document.getElementById('miss-list');
+  list.innerHTML='';
+  DAILY_MISSIONS.forEach(m=>{
+    const cur=Math.min(m.target,m.get(p));
+    const done=!!SAVE.dailyMissions.claimed[m.id];
+    const pct=Math.min(100,(cur/m.target)*100);
+    const rewardTxt=[m.xp>0?('+'+m.xp+' XP'):'',m.coins>0?('+'+m.coins+' ⬡'):''].filter(Boolean).join('  ');
+    const div=document.createElement('div');
+    div.className='miss-item'+(done?' done':'');
+    div.innerHTML=`<div class="miss-top"><span class="miss-name">${done?'✔ ':''}${m.name}</span><span class="miss-reward">${rewardTxt}</span></div>
+      <div class="miss-desc">${m.desc}</div>
+      <div class="miss-bar-track"><div class="miss-bar-fill" style="width:${pct}%"></div></div>
+      <div class="miss-progress-txt">${cur} / ${m.target}</div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('miss-wrap').classList.remove('hide');
+}
+window.openMissions=openMissions;
+
+function closeMissions(){
+  document.getElementById('miss-wrap').classList.add('hide');
+}
+window.closeMissions=closeMissions;
+
+// ─── Combo counter UI ──────────────────────────────────────────
+let comboHideTm=null;
+function showCombo(n){
+  const el=document.getElementById('combo-wrap');
+  document.getElementById('combo-num').textContent=n+'×';
+  el.classList.add('show');
+  clearTimeout(comboHideTm);
+  comboHideTm=setTimeout(()=>el.classList.remove('show'),1200);
+}
+function hideCombo(){
+  document.getElementById('combo-wrap').classList.remove('show');
+}
+
+// ─── Play time tracking ────────────────────────────────────────
+setInterval(()=>{
+  if(G && G.phase==='play'){
+    SAVE.totalPlayTimeSec++;
+    checkAchievements();
+  }
+}, 1000);
+setInterval(()=>{ if(G && G.phase==='play') scheduleSave(); }, 15000);
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && G){
+    if(G.phase==='play') captureResumeSnapshot();
+    sendSaveGame();
+  }
+});
+window.addEventListener('pagehide', ()=>{
+  if(G && G.phase==='play') captureResumeSnapshot();
+  sendSaveGame();
+});
+
+// ─── Input — touch & mouse ────────────────────────────────────
+function getPoint(e){ return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}; }
+
+function onMove(e){
+  e.preventDefault();
+  const p=getPoint(e);
+  G.mx=p.x; G.my=p.y;
+}
+
+function onTap(e){
+  e.preventDefault();
+  const p=getPoint(e);
+  G.mx=p.x; G.my=p.y;
+  // ignore taps on weapon bar
+  if(p.y>H-110) return;
+  if(G.phase==='play') fire(p.x,p.y);
+}
+
+canvas.addEventListener('touchmove',  onMove, {passive:false});
+canvas.addEventListener('touchstart', onTap,  {passive:false});
+canvas.addEventListener('mousemove',  onMove, {passive:false});
+canvas.addEventListener('click',      onTap,  {passive:false});
+
+document.addEventListener('keydown', e=>{
+  const m={'1':'INT','2':'FLOAT','3':'STR','4':'BOOL','q':'INT','w':'FLOAT','e':'STR','r':'BOOL'};
+  if(m[e.key.toLowerCase()]) selW(m[e.key.toLowerCase()]);
+});
+
+// ─── Main Loop ────────────────────────────────────────────────
+let last=0;
+let lastPhaseSeen=null;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-last)/16.67,3);
+  last=ts;
+
+  if(G.phase!==lastPhaseSeen){
+    lastPhaseSeen=G.phase;
+    document.getElementById('pause-btn').style.display=(G.phase==='play')?'flex':'none';
+  }
+
+  if(G.phase==='play'){
+    G.frame++;
+
+    ctx.save();
+    // screen shake
+    if(G.shake>0){
+      ctx.translate((Math.random()-.5)*G.shake*1.2,(Math.random()-.5)*G.shake*1.2);
+      G.shake--;
+    }
+
+    drawBG();
+    drawStars();
+    drawDanger();
+
+    // spawn
+    G.spawnTimer+=dt;
+    if(G.spawnTimer>=G.spawnInterval && G.waveCount<G.waveTarget){
+      spawnEnemy();
+      G.spawnTimer=0;
+      G.spawnInterval=Math.max(55,(160-G.level*12)*(0.82+Math.random()*0.36));
+    }
+
+    // enemies
+    G.enemies.forEach(e=>{
+      e.y+=e.spd*dt;
+      e.alpha=Math.min(1,e.alpha+0.06*dt);
+      if(e.flash>0) e.flash=Math.max(0,e.flash-dt);
+      drawEnemy(e);
+    });
+
+    // bullets
+    G.bullets.forEach(b=>{
+      b.trail.push({x:b.x,y:b.y});
+      if(b.trail.length>14) b.trail.shift();
+      b.x+=b.vx*dt; b.y+=b.vy*dt;
+      drawBullet(b);
+    });
+    G.bullets=G.bullets.filter(b=>b.x>-60&&b.x<W+60&&b.y>-60&&b.y<H+60);
+
+    // particles
+    G.particles.forEach(p=>{
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=0.09*dt;
+      p.life-=dt; p.a=Math.max(0,p.life/p.ml);
+      drawParticle(p);
+    });
+    G.particles=G.particles.filter(p=>p.life>0);
+
+    drawAim();
+    drawGun();
+    ctx.restore();
+
+    collide();
+    checkLevel();
+    hudUpdate();
+
+    // death
+    if(G.hp<=0){
+      G.phase='gameover';
+      SAVE.resume=null;
+      if(G.score>SAVE.highScore) SAVE.highScore=G.score;
+      if(G.level>SAVE.highestWave) SAVE.highestWave=G.level;
+      SAVE.coins=G.coins;
+      checkAchievements();
+      const sessionAcc = G.sessionShots>0 ? Math.round((G.sessionHits/G.sessionShots)*1000)/10 : 0;
+      document.getElementById('go-sc').textContent=String(G.score).padStart(6,'0');
+      document.getElementById('go-lv').textContent=G.level;
+      document.getElementById('go-cr').textContent=G.sessionCoins;
+      document.getElementById('go-xp').textContent=G.sessionXP;
+      document.getElementById('go-acc').textContent=sessionAcc+'%';
+      document.getElementById('go-hs').textContent=SAVE.highScore;
+      document.getElementById('ov-dead').classList.remove('hide');
+      sendGameOver({
+        score:G.score, highestWave:G.level, coinsEarned:G.sessionCoins,
+        xpEarned:G.sessionXP, accuracy:sessionAcc,
+      });
+    }
+
+  } else {
+    // idle render (start / shop / tutorial / gameover)
+    drawBG(); drawStars(); G.frame++;
+  }
+}
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>

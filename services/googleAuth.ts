@@ -31,8 +31,11 @@ export const handleGoogleSignIn =
 
       await GoogleSignin.hasPlayServices();
 
-      const userInfo =
-        await GoogleSignin.signIn();
+      try {
+          await GoogleSignin.signOut();
+        } catch {}
+
+        const userInfo = await GoogleSignin.signIn();
 
       const idToken =
         userInfo.data?.idToken;
