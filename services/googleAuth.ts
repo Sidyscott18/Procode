@@ -1,8 +1,14 @@
-import * as WebBrowser
-from "expo-web-browser";
+import {
+  GoogleSignin,
+} from "@react-native-google-signin/google-signin";
 
-import * as Google
-from "expo-auth-session/providers/google";
+import {
+  userExists,
+} from "./userService";
+
+import {
+  router,
+} from "expo-router";
 
 import {
   GoogleAuthProvider,
@@ -13,77 +19,61 @@ import {
   auth,
 } from "./firebase";
 
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId:
+    "868812370783-27r7aica1avkearl8r3pg5nn9ck6ck2t.apps.googleusercontent.com",
+});
 
-export const useGoogleAuth =
-  () => {
+export const handleGoogleSignIn =
+  async () => {
 
-    const [
-      request,
-      response,
-      promptAsync,
-    ] = Google.useAuthRequest({
+    try {
 
-      webClientId:
-        "868812370783-27r7aica1avkearl8r3pg5nn9ck6ck2t.apps.googleusercontent.com",
+      await GoogleSignin.hasPlayServices();
 
-      androidClientId:
-        "868812370783-ldjn1m4hkuq3m5ihqhivnf0cvtd4bt0d.apps.googleusercontent.com"
-    });
+      try {
+          await GoogleSignin.signOut();
+        } catch {}
 
-    const handleGoogleSignIn =
-      async () => {
+        const userInfo = await GoogleSignin.signIn();
 
-        try {
+      const idToken =
+        userInfo.data?.idToken;
 
-          const result =
-            await promptAsync();
+      if (!idToken)
+        return;
 
-          if (
-            result.type !== "success"
-          ) {
+      const credential =
 
-            console.log(result);
+        GoogleAuthProvider.credential(
+          idToken
+        );
 
-            return;
-          }
+      const result =
+        await signInWithCredential(
+          auth,
+          credential
+        );
 
-          const idToken =
-            result.authentication?.idToken;
+      const uid =
+        result.user.uid;
 
-          if (!idToken) {
+      const exists =
+        await userExists(uid);
 
-            console.log(
-              "No ID token"
-            );
+      if (exists) {
 
-            return;
-          }
+        router.replace("/home");
 
-          const credential =
+      } else {
 
-            GoogleAuthProvider.credential(
-              idToken
-            );
+        router.replace(
+          "/username-setup"
+        );
+      }
 
-          await signInWithCredential(
-            auth,
-            credential
-          );
+    } catch (error) {
 
-          console.log(
-            "Google Login Success"
-          );
-
-        } catch (error) {
-
-          console.log(error);
-        }
-      };
-
-    return {
-      request,
-      response,
-      handleGoogleSignIn,
-    };
+      console.log(error);
+    }
 };
