@@ -6,9 +6,8 @@ import {
   userExists,
 } from "./userService";
 
-import {
-  router,
-} from "expo-router";
+import { router } from "expo-router";
+import { Alert } from "react-native";
 
 import {
   GoogleAuthProvider,
@@ -72,8 +71,8 @@ export const handleGoogleSignIn =
         );
       }
 
-    } catch (error) {
-
+    } catch (error: any) {
       console.log(error);
+      Alert.alert("Google Sign-In Error", error?.message || String(error));
     }
 };
