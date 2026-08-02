@@ -207,7 +207,7 @@ function GameSheet({ game, visible, onClose, onPlay, onAction }: GameSheetProps)
             <TouchableOpacity style={styles.actionBtn} onPress={() => onAction("recap")}>
               <LinearGradient colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.02)"]} style={styles.actionBtnGradient}>
                 <Text style={styles.actionBtnIcon}>📘</Text>
-                <Text style={styles.actionBtnText}>Quick Recap</Text>
+                <Text style={styles.actionBtnText}>Quick Knowledge</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => onAction("ai")}>
@@ -252,26 +252,66 @@ function QuickRecapModal({ visible, onClose }: { visible: boolean; onClose: () =
         <LinearGradient colors={["rgba(20, 25, 45, 0.9)", "rgba(10, 15, 30, 0.95)"]} style={StyleSheet.absoluteFillObject} />
         <View style={styles.sheetHandle} />
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>📘 Quick Recap</Text>
+          <Text style={styles.modalTitle}>📘 Quick Knowledge</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
         </View>
         <ScrollView style={styles.modalScroll}>
-          <Text style={styles.recapText}>Here&apos;s what you need to know before you deploy your defenses:</Text>
+          <Text style={styles.recapText}>Notes for Pyro Game:</Text>
           
           <View style={styles.recapCard}>
             <View style={styles.recapCardHeader}>
-                <Text style={styles.recapCardIcon}>🔢</Text>
-                <Text style={styles.recapCardTitle}>Data Types & Variables</Text>
+                <Text style={styles.recapCardIcon}>📦</Text>
+                <Text style={styles.recapCardTitle}>Data Types</Text>
             </View>
-            <Text style={styles.recapCardDesc}>Variables store data. An <Text style={{fontWeight:'bold', color: "#4FF79E"}}>Integer</Text> is a whole number, a <Text style={{fontWeight:'bold', color: "#F7D44F"}}>String</Text> is text, and a <Text style={{fontWeight:'bold', color: "#C84FF7"}}>List</Text> holds multiple ordered items.</Text>
+            <Text style={styles.recapCardDesc}>A data type tells Python what kind of value a variable stores, allowing different operations.{"\n"}Example: <Text style={{fontFamily: "monospace", color: "#F7D44F"}}>age = 20</Text>, <Text style={{fontFamily: "monospace", color: "#F7D44F"}}>name = "Alex"</Text></Text>
           </View>
 
           <View style={styles.recapCard}>
             <View style={styles.recapCardHeader}>
-                <Text style={styles.recapCardIcon}>🔀</Text>
-                <Text style={styles.recapCardTitle}>Conditional Logic</Text>
+                <Text style={styles.recapCardIcon}>🔢</Text>
+                <Text style={styles.recapCardTitle}>Integer (int)</Text>
             </View>
-            <Text style={styles.recapCardDesc}>Use <Text style={{fontFamily: "monospace", color: "#4F6EF7"}}>if / elif / else</Text> to make decisions in your code. The first true condition executes its block.</Text>
+            <Text style={styles.recapCardDesc}>Stores whole numbers without decimal points.{"\n"}Examples: <Text style={{fontFamily: "monospace", color: "#4FF79E"}}>age = 20, marks = 95, temperature = -5</Text></Text>
+          </View>
+
+          <View style={styles.recapCard}>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>🎯</Text>
+                <Text style={styles.recapCardTitle}>Float (float)</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Stores numbers with decimal points.{"\n"}Examples: <Text style={{fontFamily: "monospace", color: "#4F6EF7"}}>price = 99.99, height = 5.8, pi = 3.14159</Text></Text>
+          </View>
+
+          <View style={styles.recapCard}>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>📝</Text>
+                <Text style={styles.recapCardTitle}>String (str)</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Stores text enclosed in single or double quotes.{"\n"}Examples: <Text style={{fontFamily: "monospace", color: "#F7D44F"}}>name = "John", city = 'Chennai'</Text></Text>
+          </View>
+
+          <View style={styles.recapCard}>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>⚖️</Text>
+                <Text style={styles.recapCardTitle}>Boolean (bool)</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Stores only two values: <Text style={{fontWeight:'bold', color: "#C84FF7"}}>True</Text> or <Text style={{fontWeight:'bold', color: "#C84FF7"}}>False</Text>. Used for conditions.{"\n"}Examples: <Text style={{fontFamily: "monospace", color: "#C84FF7"}}>isLoggedIn = True, isRainy = False</Text></Text>
+          </View>
+
+          <View style={styles.recapCard}>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>🔄</Text>
+                <Text style={styles.recapCardTitle}>Type Casting</Text>
+            </View>
+            <Text style={styles.recapCardDesc}>Converting one data type into another.{"\n"}• int → float: <Text style={{fontFamily: "monospace"}}>float(10) → 10.0</Text>{"\n"}• float → int: <Text style={{fontFamily: "monospace"}}>int(5.8) → 5</Text>{"\n"}• int → str: <Text style={{fontFamily: "monospace"}}>str(20) → "20"</Text>{"\n"}• str → int: <Text style={{fontFamily: "monospace"}}>int("100") → 100</Text></Text>
+          </View>
+
+          <View style={styles.recapCard}>
+            <View style={styles.recapCardHeader}>
+                <Text style={styles.recapCardIcon}>📏</Text>
+                <Text style={styles.recapCardTitle}>len() & abs()</Text>
+            </View>
+            <Text style={styles.recapCardDesc}><Text style={{fontWeight:'bold'}}>len()</Text> returns the number of characters. Example: <Text style={{fontFamily: "monospace"}}>len("Python") → 6</Text>{"\n\n"}<Text style={{fontWeight:'bold'}}>abs()</Text> returns the absolute positive value. Example: <Text style={{fontFamily: "monospace"}}>abs(-15) → 15</Text></Text>
           </View>
         </ScrollView>
       </Animated.View>
@@ -281,42 +321,143 @@ function QuickRecapModal({ visible, onClose }: { visible: boolean; onClose: () =
 
 function AskAiModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [messages, setMessages] = useState([{ role: "model", text: "Hello! I'm your Procode AI assistant. Need help understanding a concept or unstucking a level?" }]);
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
   useEffect(() => {
     if (visible) Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
     else Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
   }, [visible, fadeAnim]);
 
+  const sendMessage = async () => {
+    if (!inputText.trim() || isLoading) return;
+    const userMsg = inputText.trim();
+    setInputText("");
+    setMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    setIsLoading(true);
+
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY;
+      console.log("[AI] API Key present:", !!apiKey, "| Key prefix:", apiKey?.substring(0, 10));
+      if (!apiKey) {
+        setMessages(prev => [...prev, { role: "model", text: "Error: API Key not found. Please paste your Groq API key in the .env file as EXPO_PUBLIC_GROQ_API_KEY." }]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[AI] Making request to Groq...");
+      const res = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: "You are Procode AI. You must ONLY respond to questions related to programming and the games. You have knowledge of the 'Pyro Game' (a game where users learn Python programming by typing python spells to defeat bugs). If a question is NOT about programming or games, politely decline to answer." },
+            { role: "user", content: userMsg }
+          ]
+        })
+      });
+      console.log("[AI] Response status:", res.status);
+      const data = await res.json();
+      console.log("[AI] Response data:", JSON.stringify(data).substring(0, 200));
+      const reply = data.choices?.[0]?.message?.content || `API Error: ${JSON.stringify(data)}`;
+      setMessages(prev => [...prev, { role: "model", text: reply }]);
+    } catch (e) {
+      console.log("[AI] Fetch error:", e);
+      setMessages(prev => [...prev, { role: "model", text: `Network error: ${e}` }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View style={[styles.fullScreenModal, { opacity: fadeAnim }]}>
-        <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFillObject} />
-        <LinearGradient colors={["rgba(11, 17, 32, 0.7)", "rgba(5, 8, 17, 0.95)"]} style={StyleSheet.absoluteFillObject} />
-        
-        <View style={styles.modalHeaderFullScreen}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
-             <View style={styles.aiAvatar}>
-                <LinearGradient colors={["#C84FF7", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
-                <Text style={{fontSize: 22}}>🤖</Text>
-             </View>
-             <View>
-               <Text style={styles.modalTitle}>Procode AI</Text>
-               <Text style={styles.aiStatus}>● Online</Text>
-             </View>
+        {/* Background */}
+        <LinearGradient colors={["#050811", "#080D1C", "#050811"]} style={StyleSheet.absoluteFillObject} />
+        {/* Decorative Orbs */}
+        <View style={styles.aiOrb1} />
+        <View style={styles.aiOrb2} />
+
+        {/* Header */}
+        <View style={styles.aiHeader}>
+          <View style={styles.aiHeaderLeft}>
+            <View style={styles.aiAvatar}>
+              <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+              <Text style={styles.aiAvatarEmoji}>⚡</Text>
+            </View>
+            <View>
+              <Text style={styles.aiName}>Procode AI</Text>
+              <View style={styles.aiStatusRow}>
+                <View style={styles.aiStatusDot} />
+                <Text style={styles.aiStatusText}>Online · Llama 3.1</Text>
+              </View>
+            </View>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} style={styles.aiCloseBtn}>
+            <Text style={styles.aiCloseBtnText}>✕</Text>
+          </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={styles.chatContainer}>
-          <View style={styles.chatBubbleAi}>
-            <Text style={styles.chatTextAi}>Hello! I&apos;m your Procode AI assistant. Need help understanding a concept or unstucking a level?</Text>
-          </View>
+
+        {/* Divider */}
+        <View style={styles.aiDivider} />
+
+        {/* Messages */}
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.chatContainer}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
+        >
+          {messages.map((msg, index) => (
+            <View key={index} style={msg.role === "model" ? styles.aiMsgRow : styles.userMsgRow}>
+              {msg.role === "model" && (
+                <View style={styles.aiMsgAvatar}>
+                  <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+                  <Text style={styles.aiMsgAvatarEmoji}>⚡</Text>
+                </View>
+              )}
+              <View style={msg.role === "model" ? styles.chatBubbleAi : styles.chatBubbleUser}>
+                <Text style={msg.role === "model" ? styles.chatTextAi : styles.chatTextUser}>{msg.text}</Text>
+              </View>
+            </View>
+          ))}
+          {isLoading && (
+            <View style={styles.aiMsgRow}>
+              <View style={styles.aiMsgAvatar}>
+                <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+                <Text style={styles.aiMsgAvatarEmoji}>⚡</Text>
+              </View>
+              <View style={styles.chatBubbleAi}>
+                <Text style={[styles.chatTextAi, { opacity: 0.6 }]}>● ● ●</Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
+
+        {/* Input Row */}
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View style={styles.chatInputContainer}>
-            <TextInput style={styles.chatInput} placeholder="Ask AI anything..." placeholderTextColor="#64748B" />
-            <TouchableOpacity style={styles.sendBtn}>
-               <LinearGradient colors={["#4F6EF7", "#3B52CA"]} style={StyleSheet.absoluteFillObject} />
-               <Text style={styles.sendBtnText}>➤</Text>
-            </TouchableOpacity>
+          <View style={styles.chatInputWrapper}>
+            <View style={styles.chatInputContainer}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Ask me about Python, games..."
+                placeholderTextColor="rgba(148,163,184,0.5)"
+                value={inputText}
+                onChangeText={setInputText}
+                onSubmitEditing={sendMessage}
+                multiline={false}
+              />
+              <TouchableOpacity style={styles.sendBtn} onPress={sendMessage} disabled={isLoading}>
+                <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+                <Text style={styles.sendBtnText}>❯</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Animated.View>
@@ -400,129 +541,182 @@ export default function HomeScreen() {
 
       {/* ── Main scroll ── */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
-        {/* Premium Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Hey, {displayName} 👋</Text>
-            <Text style={styles.subGreeting}>Ready to level up today?</Text>
+
+        {/* TOP HEADER BAR */}
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.topBarLabel}>WELCOME BACK</Text>
+            <Text style={styles.topBarName}>{displayName}</Text>
           </View>
-          
-          {/* Profile Card Top Right */}
-          <TouchableOpacity activeOpacity={0.8} style={styles.profileCard} onPress={() => router.push("/profile" as any)}>
-              <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFillObject} />
-              <View style={styles.profileCardLeft}>
-                 <Text style={styles.profileCardLevel}>Lvl {level}</Text>
-                 <View style={styles.profileCardProgressBg}>
-                    <LinearGradient colors={["#4FF79E", "#4F6EF7"]} start={{x:0,y:0}} end={{x:1,y:0}} style={[styles.profileCardProgressFill, { width: `${(xpProgress || 0) * 100}%` }]} />
-                 </View>
-              </View>
-              <View style={styles.avatarBtn}>
-                 <Text style={styles.avatarBtnText}>{displayName.charAt(0).toUpperCase()}</Text>
-              </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/profile" as any)} style={styles.avatarBtn}>
+            <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+            <Text style={styles.avatarBtnText}>{displayName.charAt(0).toUpperCase()}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* XP / LEVEL PROGRESS CARD */}
+        <View style={styles.xpCard}>
+          <LinearGradient colors={["rgba(139,92,246,0.15)", "rgba(79,110,247,0.1)"]} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.xpCardRow}>
+            <View style={styles.xpCardLeft}>
+              <View style={styles.levelBadge}>
+                <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={StyleSheet.absoluteFillObject} />
+                <Text style={styles.levelBadgeText}>LVL</Text>
+                <Text style={styles.levelBadgeNum}>{level}</Text>
+              </View>
+              <View style={styles.xpInfo}>
+                <Text style={styles.xpTitle}>Level Progress</Text>
+                <Text style={styles.xpSub}>{currentProgressXp} / {xpForCurrentLevel} XP</Text>
+              </View>
+            </View>
+            <View style={styles.xpPct}>
+              <Text style={styles.xpPctText}>{Math.round(xpProgress * 100)}%</Text>
+            </View>
+          </View>
+          <View style={styles.xpBarBg}>
+            <LinearGradient colors={["#8B5CF6", "#4F6EF7", "#34D399"]} start={{x:0,y:0}} end={{x:1,y:0}} style={[styles.xpBarFill, { width: `${(xpProgress || 0) * 100}%` }]} />
+          </View>
         </View>
 
         {/* Search */}
         <View style={styles.searchWrap}>
-          <BlurView intensity={15} tint="light" style={StyleSheet.absoluteFillObject} />
           <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput placeholder="Search games..." placeholderTextColor="#64748B" style={styles.search} value={searchQuery} onChangeText={setSearchQuery} />
+          <TextInput placeholder="Search games..." placeholderTextColor="rgba(148,163,184,0.4)" style={styles.search} value={searchQuery} onChangeText={setSearchQuery} />
         </View>
 
         {/* ── Continue Playing ── */}
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Continue Playing</Text></View>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionAccentBar} />
+          <Text style={styles.sectionTitle}>Continue Playing</Text>
+          <View style={styles.sectionLiveDot} />
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.heroRow}>
           {continuePlaying.map((game) => (
              <PressCard key={game.id} onPress={() => openGameSheet(game)} style={styles.heroCard}>
                {game.image ? <Image source={game.image} style={styles.heroImage as StyleProp<ImageStyle>} resizeMode="cover" /> : <PlaceholderThumb title={game.title} style={styles.heroImage} />}
-               <LinearGradient colors={["transparent", "rgba(11,17,32,0.85)", "rgba(5, 8, 17, 1)"]} style={styles.heroGradient} />
+               <LinearGradient colors={["transparent", "rgba(5,8,17,0.7)", "rgba(5,8,17,0.98)"]} style={styles.heroGradient} />
                {game.genre && (
-                 <BlurView intensity={30} tint="dark" style={[styles.heroPill, { overflow: 'hidden' }]}>
-                   <View style={{backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "40", ...StyleSheet.absoluteFillObject}} />
+                 <View style={[styles.heroPill, { backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "33", borderColor: genreColor[game.genre] ?? "#4F6EF7" }]}>
                    <Text style={[styles.heroPillText, {color: genreColor[game.genre] ?? "#4FF79E"}]}>{game.genre}</Text>
-                 </BlurView>
+                 </View>
                )}
                <View style={styles.heroContent}>
                  <Text style={styles.heroTitle}>{game.title}</Text>
                  <Text style={styles.heroSubtitle}>{game.subtitle}</Text>
+                 <View style={styles.heroPlayBtn}>
+                   <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} start={{x:0,y:0}} end={{x:1,y:0}} style={StyleSheet.absoluteFillObject} />
+                   <Text style={styles.heroPlayBtnText}>▶  CONTINUE</Text>
+                 </View>
                </View>
              </PressCard>
           ))}
         </ScrollView>
 
         {/* ── Recommended ── */}
-        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Recommended For You</Text></View>
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionAccentBar, { backgroundColor: "#F7784F" }]} />
+          <Text style={styles.sectionTitle}>Recommended For You</Text>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardRow}>
           {recommendedGames.map((game) => (
              <PressCard key={game.id + game.title} onPress={() => openGameSheet(game)} style={styles.gameCard}>
                <View style={styles.gameImageWrap}>
                  {game.image ? <Image source={game.image} style={styles.gameImage as StyleProp<ImageStyle>} resizeMode="cover" /> : <PlaceholderThumb title={game.title} style={styles.gameImage} />}
-                 {game.genre && <View style={[styles.gameChip, { backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "CC" }]}><Text style={styles.gameChipText}>{game.genre}</Text></View>}
-                 {!game.playable && <View style={styles.gameDim} />}
+                 <LinearGradient colors={["transparent", "rgba(5,8,17,0.85)"]} style={StyleSheet.absoluteFillObject} />
+                 {game.genre && <View style={[styles.gameChip, { backgroundColor: (genreColor[game.genre] ?? "#4F6EF7") + "EE" }]}><Text style={styles.gameChipText}>{game.genre}</Text></View>}
+                 {!game.playable && (
+                   <View style={styles.gameDim}>
+                     <Text style={styles.gameDimText}>COMING SOON</Text>
+                   </View>
+                 )}
+                 {game.playable && <View style={styles.gamePlayIcon}><Text style={{ color: "#fff", fontSize: 10 }}>▶</Text></View>}
                </View>
                <Text style={styles.gameTitle} numberOfLines={1}>{game.title}</Text>
                <Text style={styles.gameSubtitle} numberOfLines={1}>{game.subtitle}</Text>
              </PressCard>
           ))}
         </ScrollView>
+
       </ScrollView>
       
-      {/* Floating Ask AI Button */}
+      {/* Floating AI Button */}
       <TouchableOpacity style={styles.floatingAiBtn} onPress={() => setAiVisible(true)}>
-          <LinearGradient colors={["#C84FF7", "#4F6EF7"]} style={styles.floatingAiGradient}>
-             <Text style={styles.floatingAiText}>🤖</Text>
+          <LinearGradient colors={["#8B5CF6", "#4F6EF7"]} style={styles.floatingAiGradient}>
+            <Text style={styles.floatingAiText}>⚡</Text>
           </LinearGradient>
       </TouchableOpacity>
     </AuthBackground>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────
+
+// ── Styles ───────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { paddingTop: 60, paddingBottom: 130 },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 28 },
-  greeting: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: -0.5 },
-  subGreeting: { color: "#94A3B8", fontSize: 14, marginTop: 4, fontWeight: "600" },
-  
-  // Profile Card
-  profileCard: { flexDirection: "row", alignItems: "center", backgroundColor: "transparent", borderRadius: 28, padding: 6, paddingLeft: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
+  container: { paddingTop: 56, paddingBottom: 130 },
+
+  // Top Bar
+  topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, marginBottom: 18 },
+  topBarLabel: { color: "rgba(139,92,246,0.9)", fontSize: 10, fontWeight: "800", letterSpacing: 2, marginBottom: 2 },
+  topBarName: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
+  avatarBtn: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 2, borderColor: "rgba(139,92,246,0.6)" },
+  avatarBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+
+  // XP Card
+  xpCard: { marginHorizontal: 22, borderRadius: 20, padding: 18, marginBottom: 22, borderWidth: 1, borderColor: "rgba(139,92,246,0.25)", overflow: "hidden", backgroundColor: "rgba(10,14,30,0.6)" },
+  xpCardRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  xpCardLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  levelBadge: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  levelBadgeText: { color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+  levelBadgeNum: { color: "#fff", fontSize: 22, fontWeight: "900", lineHeight: 26 },
+  xpInfo: { gap: 3 },
+  xpTitle: { color: "#F8FAFC", fontSize: 15, fontWeight: "800" },
+  xpSub: { color: "rgba(148,163,184,0.8)", fontSize: 12, fontWeight: "500" },
+  xpPct: {},
+  xpPctText: { color: "#8B5CF6", fontSize: 22, fontWeight: "900" },
+  xpBarBg: { height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden" },
+  xpBarFill: { height: "100%", borderRadius: 4 },
+
+  // Legacy (kept for refs)
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 24 },
+  greeting: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
+  subGreeting: { color: "rgba(148,163,184,0.8)", fontSize: 13, marginTop: 3, fontWeight: "500" },
+  profileCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 28, paddingVertical: 8, paddingLeft: 12, paddingRight: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", gap: 8 },
   profileCardLeft: { marginRight: 10, alignItems: "flex-end", zIndex: 2 },
   profileCardLevel: { color: "#fff", fontSize: 13, fontWeight: "800", marginBottom: 5 },
   profileCardProgressBg: { width: 50, height: 5, backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 3, overflow: "hidden" },
   profileCardProgressFill: { height: "100%", borderRadius: 3 },
-  avatarBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#4F6EF7", alignItems: "center", justifyContent: "center", zIndex: 2, shadowColor: "#4F6EF7", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
-  avatarBtnText: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  
+
   // Search
-  searchWrap: { marginHorizontal: 22, height: 54, borderRadius: 18, backgroundColor: "transparent", flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginBottom: 32, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden" },
-  searchIcon: { fontSize: 16, marginRight: 12, zIndex: 2 },
-  search: { flex: 1, color: "#fff", fontSize: 15, fontWeight: "500", zIndex: 2 },
-  
+  searchWrap: { marginHorizontal: 22, height: 48, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.05)", flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginBottom: 28, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" },
+  searchIcon: { fontSize: 14, marginRight: 10, opacity: 0.5 },
+  search: { flex: 1, color: "#E2E8F0", fontSize: 15, fontWeight: "400" },
+
   // Sections
-  sectionHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 16 },
-  sectionTitle: { color: "#fff", fontSize: 20, fontWeight: "800", letterSpacing: -0.2 },
-  
+  sectionHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 22, marginBottom: 14, gap: 10 },
+  sectionAccentBar: { width: 4, height: 20, borderRadius: 2, backgroundColor: "#8B5CF6" },
+  sectionTitle: { color: "#F8FAFC", fontSize: 17, fontWeight: "900", letterSpacing: -0.2, flex: 1 },
+  sectionLiveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#34D399" },
+  sectionAccent: { width: 4, height: 18, borderRadius: 2, backgroundColor: "#8B5CF6" },
+
   // Hero Card
-  heroRow: { paddingLeft: 22, paddingRight: 8, marginBottom: 32 },
-  heroCard: { width: SCREEN_WIDTH - 60, borderRadius: 28, overflow: "hidden", marginRight: 16, backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.6, shadowRadius: 20, elevation: 12 },
-  heroImage: { width: "100%", height: 210 },
-  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 160 },
-  heroPill: { position: "absolute", top: 16, left: 16, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
-  heroPillText: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
-  heroContent: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 20 },
-  heroTitle: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
-  heroSubtitle: { color: "#94A3B8", fontSize: 14, fontWeight: "600", marginTop: 4 },
-  
-  // Small Card
+  heroRow: { paddingLeft: 22, paddingRight: 8, marginBottom: 30 },
+  heroCard: { width: SCREEN_WIDTH - 50, borderRadius: 24, overflow: "hidden", marginRight: 16, backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(139,92,246,0.2)", shadowColor: "#8B5CF6", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  heroImage: { width: "100%", height: 220 },
+  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 200 },
+  heroPill: { position: "absolute", top: 14, left: 14, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  heroPillText: { fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+  heroContent: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 18, paddingBottom: 18 },
+  heroTitle: { color: "#fff", fontSize: 20, fontWeight: "900", letterSpacing: -0.5 },
+  heroSubtitle: { color: "rgba(148,163,184,0.9)", fontSize: 12, fontWeight: "500", marginTop: 3, marginBottom: 14 },
+  heroPlayBtn: { height: 40, borderRadius: 12, overflow: "hidden", alignSelf: "flex-start", paddingHorizontal: 20, justifyContent: "center", alignItems: "center" },
+  heroPlayBtnText: { color: "#fff", fontSize: 12, fontWeight: "900", letterSpacing: 1 },
+
+  // Small Game Card
   cardRow: { paddingLeft: 22, paddingRight: 8, marginBottom: 28 },
-  gameCard: { width: 164, marginRight: 14 },
-  gameImageWrap: { width: "100%", height: 118, borderRadius: 20, overflow: "hidden", backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  gameCard: { width: 158, marginRight: 14 },
+  gameImageWrap: { width: "100%", height: 120, borderRadius: 18, overflow: "hidden", backgroundColor: "#0B1120", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" },
   gameImage: { width: "100%", height: "100%" },
-  gameChip: { position: "absolute", top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  gameChipText: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  gameDim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
-  gameTitle: { color: "#E2E8F0", fontSize: 15, fontWeight: "800", marginTop: 12, letterSpacing: -0.2 },
-  gameSubtitle: { color: "#64748B", fontSize: 12, fontWeight: "600", marginTop: 4 },
+  gameSubtitle: { color: "rgba(100,116,139,0.9)", fontSize: 12, fontWeight: "500", marginTop: 3 },
 
   // Game Sheet
   sheet: { position: "absolute", bottom: 0, left: 0, right: 0, borderTopLeftRadius: 36, borderTopRightRadius: 36, maxHeight: SCREEN_HEIGHT * 0.88, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderBottomWidth: 0, overflow: "hidden" },
@@ -574,16 +768,35 @@ const styles = StyleSheet.create({
 
   // Full Screen Modal (Ask AI)
   fullScreenModal: { flex: 1 },
-  modalHeaderFullScreen: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 22, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(11, 17, 32, 0.4)", zIndex: 10 },
-  aiAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
-  aiStatus: { color: "#4FF79E", fontSize: 12, fontWeight: "800", marginTop: 4, letterSpacing: 0.5 },
-  chatContainer: { padding: 22 },
-  chatBubbleAi: { backgroundColor: "rgba(255,255,255,0.08)", padding: 18, borderRadius: 24, borderTopLeftRadius: 6, maxWidth: "88%", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", shadowColor: "#000", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.2, shadowRadius: 8 },
-  chatTextAi: { color: "#E2E8F0", fontSize: 15, lineHeight: 24, fontWeight: "500" },
-  chatInputContainer: { flexDirection: "row", alignItems: "center", padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(5, 8, 17, 0.85)" },
-  chatInput: { flex: 1, height: 52, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 26, paddingHorizontal: 20, color: "#fff", fontSize: 15, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", fontWeight: "500" },
-  sendBtn: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", marginLeft: 12, overflow: "hidden", shadowColor: "#4F6EF7", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
-  sendBtnText: { color: "#fff", fontSize: 20, fontWeight: "900" },
+  aiOrb1: { position: "absolute", width: 300, height: 300, borderRadius: 150, backgroundColor: "rgba(139, 92, 246, 0.08)", top: -80, right: -80 },
+  aiOrb2: { position: "absolute", width: 250, height: 250, borderRadius: 125, backgroundColor: "rgba(79, 110, 247, 0.06)", bottom: 100, left: -60 },
+  aiHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 70 : 50, paddingBottom: 16 },
+  aiHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  aiAvatar: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(139, 92, 246, 0.6)", shadowColor: "#8B5CF6", shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.8, shadowRadius: 12, elevation: 8 },
+  aiAvatarText: { color: "#fff", fontSize: 14, fontWeight: "900", letterSpacing: 0.5 },
+  aiAvatarEmoji: { fontSize: 22 },
+  aiName: { color: "#F8FAFC", fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
+  aiStatusRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 },
+  aiStatusDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#34D399" },
+  aiStatusText: { color: "rgba(148,163,184,0.9)", fontSize: 12, fontWeight: "600" },
+  aiCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  aiCloseBtnText: { color: "#94A3B8", fontSize: 14, fontWeight: "700" },
+  aiDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.06)", marginHorizontal: 20 },
+  chatContainer: { padding: 20, paddingTop: 24, paddingBottom: 20 },
+  aiMsgRow: { flexDirection: "row", alignItems: "flex-end", gap: 10, marginBottom: 16 },
+  userMsgRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 16 },
+  aiMsgAvatar: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.4)" },
+  aiMsgAvatarText: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
+  aiMsgAvatarEmoji: { fontSize: 14 },
+  chatBubbleAi: { backgroundColor: "rgba(30, 41, 70, 0.8)", paddingHorizontal: 16, paddingVertical: 14, borderRadius: 20, borderTopLeftRadius: 4, maxWidth: "78%", borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.2)" },
+  chatTextAi: { color: "#E2E8F0", fontSize: 14.5, lineHeight: 22, fontWeight: "400" },
+  chatBubbleUser: { backgroundColor: "#5B6EF7", paddingHorizontal: 16, paddingVertical: 14, borderRadius: 20, borderTopRightRadius: 4, maxWidth: "78%", shadowColor: "#5B6EF7", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.5, shadowRadius: 12, elevation: 6 },
+  chatTextUser: { color: "#FFFFFF", fontSize: 14.5, lineHeight: 22, fontWeight: "500" },
+  chatInputWrapper: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: Platform.OS === 'ios' ? 32 : 14 },
+  chatInputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(15, 23, 42, 0.95)", borderRadius: 32, borderWidth: 1, borderColor: "rgba(139, 92, 246, 0.35)", paddingLeft: 20, paddingRight: 6, paddingVertical: 6 },
+  chatInput: { flex: 1, height: 46, color: "#F8FAFC", fontSize: 15, fontWeight: "400" },
+  sendBtn: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", overflow: "hidden", elevation: 4, shadowColor: "#8B5CF6", shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.5, shadowRadius: 10 },
+  sendBtnText: { color: "#fff", fontSize: 18, fontWeight: "900", marginLeft: 2 },
 
   // Floating AI Button
   floatingAiBtn: { position: "absolute", bottom: 24, right: 24, shadowColor: "#C84FF7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 12 },
