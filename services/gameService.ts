@@ -34,7 +34,7 @@ export const saveGameData = async (gameId: string, data: Partial<GameData>) => {
   if (!uid) return;
   
   const docRef = doc(db, "users", uid, "games", gameId);
-  await setDoc(docRef, data, { merge: true });
+  await setDoc(docRef, { ...data, lastPlayed: new Date().toISOString() }, { merge: true });
 };
 
 export const addPlayerXp = async (amount: number) => {

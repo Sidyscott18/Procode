@@ -1,34 +1,37 @@
-import { useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, View, ActivityIndicator, Platform } from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { getGameData, saveGameData, addPlayerXp, addCoins, unlockAchievement, unlockWeapon } from "../../services/gameService";
 
 export default function AnomoliesScreen() {
   const webViewRef = useRef<WebView>(null);
+  const [saveDataStr, setSaveDataStr] = useState<string | null>(null);
 
-  const handleMessage = async (event: WebViewMessageEvent) => {
+  useEffect(() => {
+    // Fetch data before rendering webview to avoid race conditions
+    // and pass it safely via URL query param to bypass CORS on Web.
+    getGameData("anomolies").then(data => {
+      setSaveDataStr(encodeURIComponent(JSON.stringify(data || {})));
+      console.log("[Anomolies] Pre-fetched save data for URL");
+    }).catch(e => {
+      setSaveDataStr("%7B%7D"); // empty object
+    });
+  }, []);
+
+  const handleGameMessage = async (msg: any) => {
     try {
-      const msg = JSON.parse(event.nativeEvent.data);
+      if (!msg || !msg.type) return;
+      console.log("[Anomolies] Received message:", msg.type);
+
       switch (msg.type) {
-        case "REQUEST_GAME_DATA": {
-          const gameId = msg.game || "anomolies";
-          const data = await getGameData(gameId);
-          const response = {
-            type: "LOAD_GAME_DATA",
-            game: gameId,
-            data: data || {}
-          };
-          webViewRef.current?.injectJavaScript(`window.postMessage(${JSON.stringify(JSON.stringify(response))}, '*'); true;`);
-          break;
-        }
         case "SAVE_GAME":
           await saveGameData(msg.game || "anomolies", msg.data);
           break;
         case "ADD_PLAYER_XP":
-          await addPlayerXp(msg.amount);
+          await addPlayerXp(msg.amount || 0);
           break;
         case "ADD_COINS":
-          await addCoins(msg.amount);
+          await addCoins(msg.amount || 0);
           break;
         case "UNLOCK_ACHIEVEMENT":
           await unlockAchievement(msg.game || "anomolies", msg.achievementId);
@@ -38,21 +41,59 @@ export default function AnomoliesScreen() {
           break;
       }
     } catch (e) {
-      console.log("Error handling webview message", e);
+      console.log("[Anomolies] Error in handleGameMessage", e);
     }
   };
+
+  useEffect(() => {
+    // On Web, `react-native-webview` might drop cross-origin iframe messages. 
+    // We listen to the global window object as a fallback.
+    if (Platform.OS === "web") {
+      const listener = (event: MessageEvent) => {
+        try {
+          const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+          // Filter to only messages from our game
+          if (data && data.type) {
+            handleGameMessage(data);
+          }
+        } catch (e) {
+          // ignore parsing errors from other extensions/scripts
+        }
+      };
+      window.addEventListener("message", listener);
+      return () => window.removeEventListener("message", listener);
+    }
+  }, []);
+
+  const onWebViewMessage = (event: WebViewMessageEvent) => {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data);
+      handleGameMessage(msg);
+    } catch (e) {
+      console.log("[Anomolies] Bad message from WebView", e);
+    }
+  };
+
+  if (saveDataStr === null) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <WebView
         ref={webViewRef}
         source={{
-          uri: "https://ghostly-guest--musicreporterin.replit.app/",
+          uri: `https://ghostly-guest--musicreporterin.replit.app/?saveData=${saveDataStr}`,
         }}
         javaScriptEnabled
         domStorageEnabled
         allowsInlineMediaPlayback
         style={{ flex: 1 }}
-        onMessage={handleMessage}
+        onMessage={onWebViewMessage}
       />
     </View>
   );

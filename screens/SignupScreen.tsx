@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Platform,
 } from "react-native";
 
 import {
@@ -181,7 +182,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
 
   logo: {
-    width: 250,
+    width: Platform.OS === "web" ? 200 : 250,
     height: 90,
     marginBottom: 20,
   },
@@ -200,7 +201,8 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: "88%",
+    width: Platform.OS === "web" ? "100%" : "88%",
+    maxWidth: 420,
     backgroundColor: "rgba(17,24,39,0.92)",
     borderRadius: 28,
     padding: 22,

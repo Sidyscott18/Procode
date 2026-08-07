@@ -12,7 +12,7 @@ canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; 
 #ui {
   position:fixed; top:0; left:0; right:0;
   display:flex; justify-content:space-between; align-items:center;
-  padding:10px 16px; z-index:10; pointer-events:none;
+  padding:10px 16px; padding-right:60px; z-index:10; pointer-events:none;
   background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,transparent 100%);
 }
 .stat { display:flex; flex-direction:column; align-items:center; }
@@ -336,16 +336,32 @@ canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; 
     <span style="color:#ff4d6d">Wrong type = -15 HP &nbsp;|&nbsp; Crystal breach = -20 HP</span><br>
     <span style="color:#ffd60a">Kill = +10 credits &nbsp;|&nbsp; Level clear = +200 credits</span>
   </div>
-  <button class="ov-btn" style="border-color:#4cc9f0;color:#4cc9f0" onclick="startGame()" id="btn-newgame">TAP TO LAUNCH</button>
-  <button class="ov-btn hide" style="border-color:#7bf1a8;color:#7bf1a8;margin-top:12px" onclick="resumeSavedRun()" id="btn-resume">RESUME MISSION</button>
-  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:12px;padding:10px 32px;font-size:11px" onclick="openStats()">STATISTICS &amp; ACHIEVEMENTS</button>
-  <button class="ov-btn" style="border-color:#ffd60a;color:#ffd60a;margin-top:12px;padding:10px 32px;font-size:11px" onclick="openMissions()">DAILY MISSIONS</button>
+
+  <!-- Mode buttons -->
+  <button class="ov-btn" style="border-color:#4cc9f0;color:#4cc9f0" onclick="startLearnMode(1)" id="btn-newgame">▶ LEARN MODE — WAVE 1</button>
+  <button class="ov-btn hide" style="border-color:#7bf1a8;color:#7bf1a8;margin-top:12px" onclick="resumeSavedRun()" id="btn-resume">↺ RESUME MISSION</button>
+
+  <!-- Level select (shown if user has reached wave 2+) -->
+  <div id="level-select-wrap" class="hide" style="margin-top:18px;width:88%;max-width:340px">
+    <div style="font:700 9px/1 'Courier New',monospace;letter-spacing:3px;color:rgba(255,255,255,0.35);margin-bottom:10px;text-align:center">START FROM WAVE</div>
+    <div id="level-select-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"></div>
+  </div>
+
+  <!-- Arcade Mode -->
+  <div style="width:88%;max-width:340px;margin-top:20px;border-top:1px solid rgba(255,255,255,0.08);padding-top:18px">
+    <div style="font:700 9px/1 'Courier New',monospace;letter-spacing:3px;color:rgba(255,255,255,0.35);margin-bottom:10px;text-align:center">SURVIVAL MODE</div>
+    <button class="ov-btn" style="border-color:#ffd60a;color:#ffd60a;width:100%;margin-top:0" onclick="startArcadeMode()">⚡ ARCADE — ALL TYPES · ENDLESS</button>
+    <div id="arcade-hs-display" style="font:700 10px/1 'Courier New',monospace;color:rgba(255,214,10,0.5);text-align:center;margin-top:8px;letter-spacing:2px"></div>
+  </div>
+
+  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:16px;padding:10px 32px;font-size:11px" onclick="openStats()">STATISTICS &amp; ACHIEVEMENTS</button>
+  <button class="ov-btn" style="border-color:#ffd60a;color:#ffd60a;margin-top:10px;padding:10px 32px;font-size:11px" onclick="openMissions()">DAILY MISSIONS</button>
 </div>
 
 <!-- GAME OVER -->
 <div class="overlay hide" id="ov-dead">
   <div class="ov-title" style="color:#ff4d6d;text-shadow:0 0 40px rgba(255,77,109,0.5)">SYSTEM<br>FAILURE</div>
-  <div class="ov-sub">MISSION SUMMARY</div>
+  <div class="ov-sub" id="go-mode-label">MISSION SUMMARY</div>
   <div class="go-stats-grid">
     <div class="go-stat-row">SCORE &nbsp;<b id="go-sc">0</b></div>
     <div class="go-stat-row">HIGHEST WAVE &nbsp;<b id="go-lv" style="color:#4cc9f0">1</b></div>
@@ -354,8 +370,10 @@ canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; 
     <div class="go-stat-row">ACCURACY &nbsp;<b id="go-acc" style="color:#b197fc">0%</b></div>
     <div class="go-stat-row">HIGH SCORE &nbsp;<b id="go-hs" style="color:#fff">0</b></div>
   </div>
+  <div id="go-arcade-hs" style="display:none;font:700 11px/1 'Courier New',monospace;letter-spacing:2px;color:#ffd60a;margin-top:8px;text-align:center"></div>
   <button class="ov-btn" style="border-color:#ff4d6d;color:#ff4d6d;margin-top:20px" onclick="restartGame()">REBOOT</button>
-  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:12px;padding:10px 32px;font-size:11px" onclick="openStats()">VIEW STATS</button>
+  <button class="ov-btn" id="btn-go-arcade" style="border-color:#ffd60a;color:#ffd60a;margin-top:10px" onclick="startArcadeMode()">⚡ PLAY ARCADE</button>
+  <button class="ov-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);margin-top:10px;padding:10px 32px;font-size:11px" onclick="openStats()">VIEW STATS</button>
 </div>
 
 <!-- PAUSE MENU -->
@@ -367,7 +385,7 @@ canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; 
     <div class="menu-btn" onclick="openStats()">STATISTICS &amp; ACHIEVEMENTS</div>
     <div class="menu-btn" style="border-color:#ffd60a;color:#ffd60a" onclick="openMissions()">DAILY MISSIONS</div>
     <div class="menu-btn" style="border-color:#ff4d6d;color:#ff4d6d" onclick="restartFromPause()">RESTART MISSION</div>
-    <div class="menu-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.55)" onclick="exitGame()">EXIT</div>
+    <div class="menu-btn" style="border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.55)" onclick="exitGame()">EXIT TO HOME</div>
   </div>
 </div>
 
@@ -417,7 +435,7 @@ canvas { display:block; position:fixed; top:0; left:0; width:100%; height:100%; 
   <div class="ov-sub" style="margin:4px 0 8px">UPGRADE BETWEEN WAVES</div>
   <div class="shop-credits">⬡ <span id="sh-cr">0</span> CREDITS</div>
   <div class="shop-grid" id="sh-grid"></div>
-  <div class="shop-next"><button class="ov-btn" onclick="closeShop()">DEPLOY TO LEVEL <span id="sh-nextlv">2</span> →</button></div>
+  <div class="shop-next"><button class="ov-btn" onclick="closeShop()">START NEXT WAVE →</button></div>
 </div>
 
 <!-- TUTORIAL -->
@@ -459,27 +477,83 @@ const COL = {
 };
 const TYPES = ['INT','FLOAT','STR','BOOL'];
 
+// ─── Expression banks (3 tiers: easy / medium / hard) ─────────
+// Each entry is [expression, actual_type]
+const EXPR_TIERS = {
+  easy: [
+    // Clear-cut integers
+    ['42',          'INT'],  ['0',           'INT'],  ['-7',          'INT'],
+    ['100',         'INT'],  ['255',         'INT'],  ['-99',         'INT'],
+    // Clear-cut floats
+    ['3.14',        'FLOAT'],['0.5',         'FLOAT'],['-1.2',        'FLOAT'],
+    ['9.81',        'FLOAT'],['2.718',       'FLOAT'],['0.001',       'FLOAT'],
+    // Clear-cut strings
+    ["'hello'",     'STR'],  ['"Python"',    'STR'],  ["'OK'",        'STR'],
+    ["'abc'",       'STR'],  ['"hi"',        'STR'],  ["'Z'",         'STR'],
+    // Clear-cut booleans
+    ['True',        'BOOL'], ['False',       'BOOL'], ['not False',   'BOOL'],
+    ['1 == 1',      'BOOL'], ['5 > 3',       'BOOL'], ['0 < 1',       'BOOL'],
+  ],
+  medium: [
+    // Integers from expressions
+    ['len([1,2,3])','INT'],  ['2 ** 8',      'INT'],  ['int(3.9)',     'INT'],
+    ['abs(-15)',    'INT'],  ['10 // 3',     'INT'],  ['round(4.6)',   'INT'],
+    ['len("hello")','INT'],  ['10 % 3',      'INT'],  ['int(True)',    'INT'],
+    // Floats from expressions
+    ['1 / 3',       'FLOAT'],['float(7)',    'FLOAT'],['10 / 4',      'FLOAT'],
+    ['round(3.1,1)','FLOAT'],['1.0 + 0',    'FLOAT'],['abs(-2.5)',    'FLOAT'],
+    ['0.1 + 0.2',   'FLOAT'],['2 ** 0.5',   'FLOAT'],['4.0 // 1',    'FLOAT'],
+    // Strings from expressions
+    ['str(42)',     'STR'],  ['str(True)',   'STR'],  ["'a' * 3",     'STR'],
+    ["'ab' + 'c'", 'STR'],  ['chr(65)',     'STR'],  ['f"{2+2}"',   'STR'],
+    ["str(3.14)",  'STR'],  ['"" + "hi"',  'STR'],  ["" + "'x'*5",'STR'],
+    // Booleans from expressions
+    ['bool(0)',     'BOOL'], ['bool(1)',     'BOOL'], ['bool("")',    'BOOL'],
+    ['None is None','BOOL'], ['type(1)==int','BOOL'], ['"a" in "cat"','BOOL'],
+    ['3 != 4',      'BOOL'], ['not 0',      'BOOL'], ['bool([])',    'BOOL'],
+  ],
+  hard: [
+    // Tricky integers (look like floats or booleans)
+    ['int(3.99)',   'INT'],  ['round(2.5)',  'INT'],  ['True + True', 'INT'],
+    ['False + 1',  'INT'],  ['int("007")',  'INT'],  ['5 // 2',      'INT'],
+    ['len("\'hi\'")', 'INT'], ['ord("A")',  'INT'],  ['hash(True)',  'INT'],
+    // Tricky floats (look like ints)
+    ['1.0',        'FLOAT'],['2.0 ** 3',   'FLOAT'], ['float(5//2)', 'FLOAT'],
+    ['4 / 2',      'FLOAT'],['10.0 % 3',   'FLOAT'], ['abs(-0.0)',   'FLOAT'],
+    ['-0.0',       'FLOAT'],['1e2',        'FLOAT'],  ['float(0)',   'FLOAT'],
+    // Tricky strings (look like numbers)
+    ['"42"',       'STR'],  ['"3.14"',     'STR'],   ['"True"',     'STR'],
+    ['str(None)',   'STR'],  ['"0"',        'STR'],   ['"1 + 1"',   'STR'],
+    ['repr(42)',    'STR'],  ['" "',        'STR'],   ['"False"',    'STR'],
+    // Tricky booleans (look like ints)
+    ['1 < 2 < 3',  'BOOL'], ['"" == False','BOOL'],  ['0 == False', 'BOOL'],
+    ['None == 0',  'BOOL'], ['True == 1',  'BOOL'],  ['bool("0")',  'BOOL'],
+    ['not not 1',  'BOOL'], ['2 > 1 > 0',  'BOOL'],  ['bool(0.0)',  'BOOL'],
+  ],
+};
+
+// Legacy EXPR used by learn-mode typesForLevel system
 const EXPR = {
-  INT:   ['42','0','-7','255','1000','len([1,2])','2**8','int(3.9)','abs(-5)','100'],
-  FLOAT: ['3.14','0.5','-1.2','2.718','float(3)','1/3','9.81','0.001','1.5'],
-  STR:   ["'hi'",'"py"',"'OK'",'str(10)','f"{x}"',"'ab'+'c'",'chr(65)',"'Z'"],
-  BOOL:  ['True','False','not 0','1==1','bool(0)','3>2','None is None','0<1'],
+  INT:   ['42','0','-7','255','len([1,2])','2**8','int(3.9)','abs(-5)','round(4.6)','10//3'],
+  FLOAT: ['3.14','0.5','-1.2','2.718','float(3)','1/3','9.81','0.001','10/4','2**0.5'],
+  STR:   ["'hello'",'"Python"',"'OK'",'str(42)','f"{2+2}"',"'ab'+'c'",'chr(65)',"'Z'",'str(True)'],
+  BOOL:  ['True','False','not 0','1==1','bool(0)','5>3','None is None','0<1','3!=4','bool([])'],
 };
 
 // ─── Tutorial content ──────────────────────────────────────────
 const TYPE_INFO = {
-  INT:   { label:'INTEGER', color:'#b197fc',
-           desc:'Whole numbers with no decimal point. Load INT ammo whenever a crystal\u2019s expression evaluates to a whole number.',
-           examples:['42','-7','255','len([1,2])'] },
+  INT: { label:'INTEGER', color:'#b197fc',
+    desc:'int stores whole numbers with NO decimal point. Positive, negative or zero — if there is no dot, it is an int. Watch out: int(3.9) → 3, True + True → 2, round(2.5) → 2.',
+    examples:['42','-7','int(3.9)','len([1,2,3])','True+True'] },
   FLOAT: { label:'FLOAT', color:'#ff9f7c',
-           desc:'Numbers that carry a decimal point. Load FLOAT ammo whenever the expression evaluates to a fractional value.',
-           examples:['3.14','0.5','9.81','1/3'] },
-  STR:   { label:'STRING', color:'#ffd60a',
-           desc:'Text, always wrapped in quotes. Load STR ammo whenever the expression evaluates to text.',
-           examples:["'hi'",'"py"',"str(10)"] },
-  BOOL:  { label:'BOOLEAN', color:'#4cc9f0',
-           desc:'Only ever True or False. Load BOOL ammo whenever the expression evaluates to a boolean.',
-           examples:['True','False','3>2'] },
+    desc:'float stores numbers WITH a decimal point. Key rule: any division with / always gives a float (5/1 → 5.0). 1.0 looks like an int but it is a float!',
+    examples:['3.14','4/2','1.0','float(7)','0.1+0.2'] },
+  STR: { label:'STRING', color:'#ffd60a',
+    desc:'str stores text. It is ALWAYS wrapped in quotes \' or ". str(42) turns the number 42 into "42" — a string. Even "42" looks like a number but is text!',
+    examples:["'hello'",'"42"','str(True)','chr(65)',"'a'*3"] },
+  BOOL: { label:'BOOLEAN', color:'#4cc9f0',
+    desc:'bool is always True or False. Comparison operators (==, !=, <, >, in, is) always return bool. bool(0) → False, bool("hi") → True. Trick: True == 1 is True but type is bool!',
+    examples:['True','5>3','1==1','bool(0)','"a" in "cat"'] },
 };
 
 function typesForLevel(l){
@@ -559,6 +633,7 @@ function defaultSaveData(){
     coins: 0,
     lifetimeCoins: 0,
     highScore: 0,
+    arcadeHighScore: 0,
     highestWave: 0,
     totalEnemiesDestroyed: 0,
     totalShotsFired: 0,
@@ -613,6 +688,7 @@ function applySaveData(incoming){
     coins: Number.isFinite(incoming.coins)?incoming.coins:d.coins,
     lifetimeCoins: Number.isFinite(incoming.lifetimeCoins)?incoming.lifetimeCoins:d.lifetimeCoins,
     highScore: Number.isFinite(incoming.highScore)?incoming.highScore:d.highScore,
+    arcadeHighScore: Number.isFinite(incoming.arcadeHighScore)?incoming.arcadeHighScore:d.arcadeHighScore,
     highestWave: Number.isFinite(incoming.highestWave)?incoming.highestWave:d.highestWave,
     totalEnemiesDestroyed: Number.isFinite(incoming.totalEnemiesDestroyed)?incoming.totalEnemiesDestroyed:d.totalEnemiesDestroyed,
     totalShotsFired: Number.isFinite(incoming.totalShotsFired)?incoming.totalShotsFired:d.totalShotsFired,
@@ -656,6 +732,8 @@ function onSaveDataReady(){
   hudUpdate(); updateXPBar();
   const resumeBtn=document.getElementById('btn-resume');
   if(SAVE.resume && resumeBtn) resumeBtn.classList.remove('hide');
+  // Show level-select if player has passed wave 1
+  renderStartScreen();
 }
 
 // request save data as soon as the game boots; fall back to defaults if RN never answers
@@ -664,16 +742,17 @@ setTimeout(()=>{ if(!rnDataReceived){ rnDataReceived=true; onSaveDataReady(); } 
 
 // ─── State ────────────────────────────────────────────────────
 let G; // game object
-function fresh(){
+function fresh(mode='learn', startLevel=1){
   const ownedGuns={};
   (SAVE.unlockedWeapons||['standard']).forEach(w=>ownedGuns[w]=true);
   return {
+    mode: mode,         // 'learn' | 'arcade'
     phase: 'start',
-    level: 1, hp: 100, score: 0, coins: SAVE.coins||0,
+    level: startLevel, hp: 100, score: 0, coins: SAVE.coins||0,
     weapon: 'INT', gun: SAVE.equippedWeapon||'standard',
     enemies: [], bullets: [], particles: [],
     stars: makeStars(),
-    mx: -999, my: -999,  // touch/mouse aim point
+    mx: -999, my: -999,
     spawnTimer: 0, spawnInterval: 160,
     waveCount: 0, waveTarget: 10,
     killed: 0,
@@ -682,12 +761,14 @@ function fresh(){
     frame: 0, shake: 0,
     eid: 0,
     levelDone: false,
-    // session-only progression counters (this run)
     sessionXP: 0, sessionCoins: 0, sessionShots: 0, sessionHits: 0,
     prevPhase: null,
-    // combo / perfect-wave tracking
     combo: 0, comboMax: 0,
     waveWrongHits: 0, waveBreach: false,
+    // arcade fields
+    arcadeKills: 0, arcadeTime: 0,
+    arcadePhase: 0,           // 0=easy+color, 1=medium+some-mono, 2=hard+deception
+    arcadePhaseAnnounced: [], // phases already announced
   };
 }
 G = fresh();
@@ -708,20 +789,56 @@ function makeStars(){
 }
 
 // ─── Available types by level ─────────────────────────────────
-function avTypes(){ return typesForLevel(G.level); }
+function avTypes(){
+  if(G.mode==='arcade') return TYPES; // all 4 always
+  return typesForLevel(G.level);
+}
 
 // ─── Spawn enemy ──────────────────────────────────────────────
 function spawnEnemy(){
   const types = avTypes();
   const type  = types[Math.floor(Math.random()*types.length)];
-  const mono  = G.level >= 10;
   const sz    = 38 + Math.random()*18;
   const margin= sz+20;
   const x     = margin + Math.random()*(W - margin*2);
-  const spd   = Math.min(0.45 + G.level*0.065 + Math.random()*0.25, 2.8);
-  const expr  = EXPR[type][Math.floor(Math.random()*EXPR[type].length)];
+
+  let spd;
+  if(G.mode==='arcade'){
+    // Arcade: speed ramps every 20 kills up to a cap
+    const ramp = Math.floor((G.arcadeKills||0)/20);
+    spd = Math.min(0.5 + ramp*0.15 + Math.random()*0.25, 3.2);
+  } else {
+    spd = Math.min(0.45 + G.level*0.065 + Math.random()*0.25, 2.8);
+  }
+
+  // Pick expression based on arcade phase / learn level
+  let expr, displayType, deceive=false;
+  if(G.mode==='arcade'){
+    const tier = G.arcadePhase===0?'easy' : G.arcadePhase===1?'medium' : 'hard';
+    const pool = EXPR_TIERS[tier].filter(([,t])=>t===type);
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    expr = pick ? pick[0] : '?';
+
+    // Phase 3 deception: 40% chance to show wrong-type color
+    if(G.arcadePhase>=2 && Math.random()<0.40){
+      const wrongTypes = TYPES.filter(t=>t!==type);
+      displayType = wrongTypes[Math.floor(Math.random()*wrongTypes.length)];
+      deceive=true;
+    } else if(G.arcadePhase>=1){
+      // Phase 2: 20% chance monochrome (white/gray), no color hint
+      if(Math.random()<0.20){ displayType='MONO'; }
+      else { displayType=type; }
+    } else {
+      displayType=type;
+    }
+  } else {
+    expr = EXPR[type][Math.floor(Math.random()*EXPR[type].length)];
+    displayType = type;
+  }
+
   G.enemies.push({
-    id:G.eid++, type, mono, x, y:-sz-10, sz, spd,
+    id:G.eid++, type, displayType, deceive, mono:(displayType==='MONO'),
+    x, y:-sz-10, sz, spd,
     expr, alpha:0, pulse:Math.random()*Math.PI*2,
     flash:0, wobble:Math.random()*Math.PI*2, rot:0
   });
@@ -1357,8 +1474,17 @@ function collide(){
           SAVE.totalEnemiesDestroyed++;
           SAVE.lifetimeCoins+=10; G.sessionCoins+=10;
           SAVE.coins=G.coins;
-          if(G.score>SAVE.highScore) SAVE.highScore=G.score;
+          if(G.score>SAVE.highScore && G.mode!=='arcade') SAVE.highScore=G.score;
           addXP(5);
+
+          // Arcade kill counter + spawn ramp
+          if(G.mode==='arcade'){
+            G.arcadeKills=(G.arcadeKills||0)+1;
+            // Ramp spawn speed every 10 kills
+            if(G.arcadeKills%10===0){
+              G.spawnInterval=Math.max(40, G.spawnInterval*0.92);
+            }
+          }
 
           // combo tracking
           G.combo=(G.combo||0)+1;
@@ -1407,9 +1533,12 @@ function collide(){
 
 // ─── Level end check ──────────────────────────────────────────
 function checkLevel(){
+  // In arcade mode there are no level breaks — endless
+  if(G.mode==='arcade') return;
+
   if(!G.levelDone && G.waveCount>=G.waveTarget && G.enemies.length===0 && G.bullets.length===0){
     G.levelDone=true;
-    G.coins+=200; G.score+=200+G.level*50;
+    G.coins+=200; G.score+=200+G.level*10;
     SAVE.lifetimeCoins+=200; G.sessionCoins+=200;
     SAVE.coins=G.coins;
     if(G.score>SAVE.highScore) SAVE.highScore=G.score;
@@ -1453,7 +1582,6 @@ const SHOP=[
 function openShop(){
   document.getElementById('shop-wrap').classList.remove('hide');
   document.getElementById('sh-cr').textContent=G.coins;
-  document.getElementById('sh-nextlv').textContent=G.level;
   const grid=document.getElementById('sh-grid');
   grid.innerHTML='';
   SHOP.forEach(item=>{
@@ -1529,50 +1657,127 @@ function closeShop(){
 window.closeShop=closeShop;
 
 // ─── Start / Restart ──────────────────────────────────────────
-function startGame(){
+
+// Build the start screen UI (called after save data arrives)
+function renderStartScreen(){
+  // Resume button
+  const resumeBtn=document.getElementById('btn-resume');
+  if(SAVE.resume && resumeBtn) resumeBtn.classList.remove('hide');
+
+  // Level select grid: show if player has cleared at least 1 wave
+  const maxWave = SAVE.highestWave||0;
+  const wrap = document.getElementById('level-select-wrap');
+  const grid = document.getElementById('level-select-grid');
+  if(maxWave>=2 && wrap && grid){
+    wrap.classList.remove('hide');
+    grid.innerHTML='';
+    const maxShow = Math.min(maxWave, 12);
+    for(let lv=1; lv<=maxShow; lv++){
+      const btn=document.createElement('button');
+      btn.className='ov-btn';
+      btn.style.cssText='padding:8px 14px;font-size:11px;margin:0;border-color:rgba(76,201,240,0.45);color:#4cc9f0;min-width:48px';
+      btn.textContent='W'+lv;
+      btn.onclick=(()=>{ const l=lv; return ()=>startLearnMode(l); })();
+      grid.appendChild(btn);
+    }
+  }
+
+  // Arcade high score
+  const ahs = document.getElementById('arcade-hs-display');
+  if(ahs && SAVE.arcadeHighScore>0){
+    ahs.textContent='BEST: '+String(SAVE.arcadeHighScore).padStart(6,'0');
+  }
+}
+
+// ─── Learn Mode start (from any previously-reached level) ─────
+function startLearnMode(level){
+  level = level||1;
   document.getElementById('ov-start').classList.add('hide');
   SAVE.resume=null; scheduleSave();
-  G=fresh();
-  G.phase='tutorial';
-  const dangerY = H-160;
-  startTutorialQueue([
-    {
-      kicker:'INCOMING TRANSMISSION',
-      title:'SECTOR BREACH',
-      body:'Alien data crystals are inbound. Each crystal displays a Python expression. Your job: work out what data type it evaluates to.',
-      color:'#4cc9f0'
-    },
-    {
-      kicker:'WARNING',
-      title:'THE BOUNDARY',
-      body:"Let a crystal cross the red line and it breaches your hull for -20 HP. Don't let them through.",
-      color:'#ff4d6d',
-      highlight:{x:0,y:dangerY-18,w:W,h:36}, pad:0
-    },
-    {
-      kicker:'LOADOUT',
-      title:'YOUR ARSENAL',
-      body:'These are your ammo types. Tap a pod to load that type before you fire at a crystal.',
-      color:'#fff',
-      highlight:'wbar'
-    },
-    {
-      kicker:'AMMO TYPE 1 OF 4',
-      title: TYPE_INFO.INT.label+' LOADED',
-      body: TYPE_INFO.INT.desc,
-      color: TYPE_INFO.INT.color,
-      examples: TYPE_INFO.INT.examples,
-      highlight:'wp-INT',
-      finalLabel:'LAUNCH WAVE 1 →'
-    },
-  ], ()=>{ G.phase='play'; hudUpdate(); });
+  G=fresh('learn', level);
+  G.waveTarget = 10 + (level-1)*2;
+  G.spawnInterval = Math.max(55, 160-(level-1)*12);
+
+  // Unlock weapons for chosen level
+  const ownedGuns={};
+  (SAVE.unlockedWeapons||['standard']).forEach(w=>ownedGuns[w]=true);
+  G.ownedGuns=ownedGuns; G.equippedGun=SAVE.equippedWeapon||'standard'; G.gun=G.equippedGun;
+
+  if(level===1){
+    // Full tutorial on first run
+    G.phase='tutorial';
+    const dangerY = H-160;
+    startTutorialQueue([
+      { kicker:'INCOMING TRANSMISSION', title:'SECTOR BREACH',
+        body:'Alien data crystals are inbound. Each crystal displays a Python expression. Your job: work out what data type it evaluates to.',
+        color:'#4cc9f0' },
+      { kicker:'WARNING', title:'THE BOUNDARY',
+        body:"Let a crystal cross the red line and it breaches your hull for -20 HP. Don't let them through.",
+        color:'#ff4d6d', highlight:{x:0,y:dangerY-18,w:W,h:36}, pad:0 },
+      { kicker:'LOADOUT', title:'YOUR ARSENAL',
+        body:'These are your ammo types. Tap a pod to load that type before you fire at a crystal.',
+        color:'#fff', highlight:'wbar' },
+      { kicker:'AMMO TYPE 1 OF 4', title: TYPE_INFO.INT.label+' LOADED',
+        body: TYPE_INFO.INT.desc, color: TYPE_INFO.INT.color,
+        examples: TYPE_INFO.INT.examples, highlight:'wp-INT', finalLabel:'LAUNCH WAVE 1 →' },
+    ], ()=>{ G.phase='play'; hudUpdate(); });
+  } else {
+    // Announce which types are active at this level
+    const curTypes = typesForLevel(level);
+    const newType = curTypes.find(t=>!typesForLevel(level-1).includes(t));
+    if(newType){
+      const info = TYPE_INFO[newType];
+      G.phase='tutorial';
+      startTutorialQueue([{
+        kicker:'RESUMING AT WAVE '+level,
+        title: info.label+' TYPE ACTIVE',
+        body: info.desc,
+        color: info.color,
+        examples: info.examples,
+        highlight: 'wp-'+newType,
+        finalLabel: 'LAUNCH WAVE '+level+' →'
+      }], ()=>{ G.phase='play'; hudUpdate(); });
+    } else {
+      G.phase='play';
+    }
+  }
+  selW('INT');
+  hudUpdate();
 }
+window.startLearnMode=startLearnMode;
+
+// ─── Legacy alias ─────────────────────────────────────────────
+function startGame(){ startLearnMode(1); }
 window.startGame=startGame;
+
+// ─── Arcade Mode ──────────────────────────────────────────────
+function startArcadeMode(){
+  document.getElementById('ov-start').classList.add('hide');
+  document.getElementById('ov-dead').classList.add('hide');
+  SAVE.resume=null;
+  G=fresh('arcade',1);
+  G.waveTarget=999999; // effectively infinite
+  G.spawnInterval=130;
+  G.phase='tutorial';
+  startTutorialQueue([{
+    kicker:'ARCADE MODE', title:'SURVIVAL · ALL TYPES',
+    body:'All 4 Python data types attack from the start. No breaks, no shop. Survive as long as possible and beat your high score!',
+    color:'#ffd60a',
+    examples:['INT','FLOAT','STR','BOOL'],
+    finalLabel:'START →'
+  }], ()=>{ G.phase='play'; hudUpdate(); });
+  selW('INT');
+  hudUpdate();
+}
+window.startArcadeMode=startArcadeMode;
 
 function restartGame(){
   document.getElementById('ov-dead').classList.add('hide');
   SAVE.resume=null;
-  G=fresh();
+  if(G.mode==='arcade'){
+    startArcadeMode(); return;
+  }
+  G=fresh('learn',1);
   G.phase='play';
   G.waveTarget=10;
   G.spawnInterval=160;
@@ -1587,7 +1792,7 @@ function resumeSavedRun(){
   if(!SAVE.resume) return;
   document.getElementById('ov-start').classList.add('hide');
   const r=SAVE.resume;
-  G=fresh();
+  G=fresh('learn', r.level||1);
   G.level=r.level||1; G.hp=r.hp!=null?r.hp:100; G.score=r.score||0;
   G.waveTarget=r.waveTarget||(10+G.level*2);
   G.waveCount=r.waveCount||0; G.killed=r.killed||0;
@@ -1637,7 +1842,12 @@ window.restartFromPause=restartFromPause;
 function exitGame(){
   captureResumeSnapshot();
   sendSaveGame();
+  // Show saving toast, then navigate back after a short delay
   toast('PROGRESS SAVED','#7bf1a8');
+  setTimeout(()=>{
+    document.getElementById('ov-pause').classList.add('hide');
+    postToRN({ type:'EXIT_GAME', game:'pyro' });
+  }, 900);
 }
 window.exitGame=exitGame;
 
@@ -1797,6 +2007,34 @@ function loop(ts){
   if(G.phase==='play'){
     G.frame++;
 
+    // ── Arcade phase transitions ──────────────────────────────
+    if(G.mode==='arcade'){
+      const kills = G.arcadeKills||0;
+      // Phase 1 at 15 kills, Phase 2 at 40 kills
+      const newPhase = kills>=40 ? 2 : kills>=15 ? 1 : 0;
+      if(newPhase > (G.arcadePhase||0) && !(G.arcadePhaseAnnounced||[]).includes(newPhase)){
+        G.arcadePhase = newPhase;
+        G.arcadePhaseAnnounced = [...(G.arcadePhaseAnnounced||[]), newPhase];
+        G.phase='tutorial';
+        const msgs = [
+          null, // phase 0 announced at start
+          { kicker:'PHASE 2 — MEDIUM', title:'HARDER EXPRESSIONS',
+            body:'Expressions are now tricky function calls like str(42), int(3.9), bool(0). Some crystals appear in WHITE with no color hint — you must read the expression carefully. Remember: 4/2 = 2.0 (FLOAT), not int!',
+            color:'#ff9f7c', examples:['str(42)','int(3.9)','4/2','bool("")','chr(65)'], finalLabel:'KEEP GOING →' },
+          { kicker:'PHASE 3 — DECEPTION', title:'COLOR TRAP ACTIVATED',
+            body:'DANGER! Some crystals now show the WRONG color on purpose. The color is a lie — ignore it. Read the expression: "42" is a STRING (quotes!), 1.0 is FLOAT, True+True=2 is INT. Trust the expression, not the color!',
+            color:'#ff4d6d', examples:['"42"=STR','1.0=FLOAT','True+True=INT','4/2=FLOAT','bool("0")=BOOL'], finalLabel:'SURVIVE →' },
+        ];
+        if(msgs[newPhase]){
+          startTutorialQueue([msgs[newPhase]], ()=>{ G.phase='play'; hudUpdate(); });
+        } else {
+          G.phase='play';
+        }
+        hudUpdate();
+      }
+    }
+    if(G.phase!=='play') return; // tutorial took over
+
     ctx.save();
     // screen shake
     if(G.shake>0){
@@ -1853,8 +2091,21 @@ function loop(ts){
     if(G.hp<=0){
       G.phase='gameover';
       SAVE.resume=null;
-      if(G.score>SAVE.highScore) SAVE.highScore=G.score;
-      if(G.level>SAVE.highestWave) SAVE.highestWave=G.level;
+      if(G.mode==='arcade'){
+        // Arcade: save arcade high score
+        if(G.score>SAVE.arcadeHighScore) SAVE.arcadeHighScore=G.score;
+        document.getElementById('go-mode-label').textContent='ARCADE — GAME OVER';
+        const ahs=document.getElementById('go-arcade-hs');
+        if(ahs){ ahs.style.display='block'; ahs.textContent='ARCADE BEST: '+String(SAVE.arcadeHighScore).padStart(6,'0'); }
+        document.getElementById('btn-go-arcade').style.display='flex';
+      } else {
+        if(G.score>SAVE.highScore) SAVE.highScore=G.score;
+        if(G.level>SAVE.highestWave) SAVE.highestWave=G.level;
+        document.getElementById('go-mode-label').textContent='MISSION SUMMARY';
+        const ahs=document.getElementById('go-arcade-hs');
+        if(ahs) ahs.style.display='none';
+        document.getElementById('btn-go-arcade').style.display='none';
+      }
       SAVE.coins=G.coins;
       checkAchievements();
       const sessionAcc = G.sessionShots>0 ? Math.round((G.sessionHits/G.sessionShots)*1000)/10 : 0;
@@ -1863,11 +2114,12 @@ function loop(ts){
       document.getElementById('go-cr').textContent=G.sessionCoins;
       document.getElementById('go-xp').textContent=G.sessionXP;
       document.getElementById('go-acc').textContent=sessionAcc+'%';
-      document.getElementById('go-hs').textContent=SAVE.highScore;
+      document.getElementById('go-hs').textContent=G.mode==='arcade'?SAVE.arcadeHighScore:SAVE.highScore;
       document.getElementById('ov-dead').classList.remove('hide');
       sendGameOver({
         score:G.score, highestWave:G.level, coinsEarned:G.sessionCoins,
         xpEarned:G.sessionXP, accuracy:sessionAcc,
+        mode:G.mode, arcadeHighScore:SAVE.arcadeHighScore,
       });
     }
 

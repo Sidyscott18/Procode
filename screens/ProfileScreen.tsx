@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -60,7 +60,8 @@ export default function ProfileScreen() {
 
   return (
     <AuthBackground>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.container}>
         
         {/* Header */}
         <View style={styles.header}>
@@ -158,13 +159,15 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
         
+        </View>
       </ScrollView>
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { paddingTop: 60, paddingBottom: 60 },
+  scrollContent: { alignItems: "center" },
+  container: { paddingTop: 60, paddingBottom: 60, width: "100%", maxWidth: Platform.OS === 'web' ? 800 : undefined },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, marginBottom: 30 },
   backBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
   backBtnText: { color: "#fff", fontSize: 20 },

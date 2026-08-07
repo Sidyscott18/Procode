@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 
 import { useState, useEffect } from "react";
@@ -360,18 +361,19 @@ export default function UsernameSetupScreen() {
 const styles = StyleSheet.create({
 
   scott: {
-    width: 320,
-    height: 320,
-    marginBottom: -55,
+    width: Platform.OS === "web" ? 220 : 320,
+    height: Platform.OS === "web" ? 220 : 320,
+    marginBottom: Platform.OS === "web" ? -40 : -55,
     zIndex: 10,
   },
 
   card: {
-    width: "88%",
+    width: Platform.OS === "web" ? "100%" : "88%",
+    maxWidth: 420,
     backgroundColor: "rgba(17,24,39,0.95)",
     borderRadius: 34,
     paddingHorizontal: 26,
-    paddingTop: 70,
+    paddingTop: Platform.OS === "web" ? 50 : 70,
     paddingBottom: 18,
     borderWidth: 1,
     borderColor: "rgba(124,58,237,0.25)",

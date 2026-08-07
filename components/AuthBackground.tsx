@@ -1,6 +1,7 @@
 import {
   View,
   StyleSheet,
+  Platform,
 } from "react-native";
 
 import {
@@ -32,7 +33,13 @@ export default function AuthBackground({
       <View style={styles.codeRight}>
       </View>
 
-      {children}
+      {Platform.OS === 'web' ? (
+        <View style={styles.webCenter}>
+          {children}
+        </View>
+      ) : (
+        children
+      )}
 
     </LinearGradient>
   );
@@ -96,6 +103,15 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     backgroundColor: "rgba(168,85,247,0.08)",
+  },
+
+  webCenter: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
 });

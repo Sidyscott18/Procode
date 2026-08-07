@@ -8,9 +8,30 @@ import { auth, db } from "../../services/firebase";
 export default function PyroScreen() {
   const [html, setHtml] = useState("");
   const webViewRef = useRef<WebView>(null);
+  // Pre-fetched save data — loaded eagerly on mount so we can respond
+  // to the game's REQUEST_SAVE instantly (the game falls back to defaults
+  // after only 900 ms, which is often shorter than a cold Firestore fetch).
+  const cachedSave = useRef<object | null>(null);
 
   useEffect(() => {
-    const loadGame = async () => {
+    const init = async () => {
+      // 1. Pre-fetch save data from Firestore as early as possible
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        try {
+          const gameRef = doc(db, "users", uid, "games", "pyro");
+          const snap = await getDoc(gameRef);
+          cachedSave.current = snap.exists() ? snap.data() : {};
+          console.log("[Pyro] Pre-fetched save data");
+        } catch (e) {
+          console.log("[Pyro] Pre-fetch error (will retry on REQUEST_SAVE):", e);
+          cachedSave.current = {};
+        }
+      } else {
+        cachedSave.current = {};
+      }
+
+      // 2. Load game HTML
       try {
         const asset = Asset.fromModule(require("../../assets/games/pyro.html"));
         await asset.downloadAsync();
@@ -21,7 +42,7 @@ export default function PyroScreen() {
         console.error("[Pyro] Failed to load game HTML:", err);
       }
     };
-    loadGame();
+    init();
   }, []);
 
   // ── Send save data to WebView ──────────────────────────────────
@@ -38,6 +59,16 @@ export default function PyroScreen() {
 
   // ── Load save data from Firestore and send to WebView ─────────
   const loadAndSendSaveData = async () => {
+    // Use the pre-fetched cache if available — this avoids the async
+    // Firestore round-trip that was losing the race against the game's
+    // 900ms fallback-to-defaults timer.
+    if (cachedSave.current !== null) {
+      console.log("[Pyro] Sending pre-fetched save data");
+      sendSaveToWebView(cachedSave.current);
+      return;
+    }
+
+    // Fallback: cache wasn't ready yet, fetch now
     const uid = auth.currentUser?.uid;
     if (!uid) {
       sendSaveToWebView({});
@@ -47,10 +78,12 @@ export default function PyroScreen() {
       const gameRef = doc(db, "users", uid, "games", "pyro");
       const snap = await getDoc(gameRef);
       if (snap.exists()) {
-        console.log("[Pyro] Loaded save data:", JSON.stringify(snap.data()).substring(0, 100));
+        console.log("[Pyro] Loaded save data (fallback fetch):", JSON.stringify(snap.data()).substring(0, 100));
+        cachedSave.current = snap.data();
         sendSaveToWebView(snap.data());
       } else {
         console.log("[Pyro] No save data, starting fresh");
+        cachedSave.current = {};
         sendSaveToWebView({});
       }
     } catch (e) {

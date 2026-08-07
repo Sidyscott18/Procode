@@ -5,30 +5,48 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 
-import {
-  handleGoogleSignIn,
-} from "../services/googleAuth";
-  
-import {
-  router,
-} from "expo-router";
-
-import {
-  LinearGradient,
-} from "expo-linear-gradient";
-
-import {
-  AntDesign,
-} from "@expo/vector-icons";
-
-import AuthBackground
-from "../components/AuthBackground";
+import { useState } from "react";
+import { handleGoogleSignIn } from "../services/googleAuth";
+import { loginUser } from "../services/auth";
+import { userExists } from "../services/userService";
+import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { AntDesign } from "@expo/vector-icons";
+import AuthBackground from "../components/AuthBackground";
+import { auth } from "../services/firebase";
 
 export default function LoginScreen() {
-  return (
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Missing Fields", "Please enter your email and password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const user = await loginUser(email.trim(), password);
+      const exists = await userExists(user.uid);
+      if (exists) {
+        router.replace("/home");
+      } else {
+        router.replace("/username-setup");
+      }
+    } catch (error: any) {
+      Alert.alert("Login Error", error?.message || String(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
     <AuthBackground>
 
       <Image
@@ -51,6 +69,10 @@ export default function LoginScreen() {
           placeholder="Email"
           placeholderTextColor="#777"
           style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
 
         <TextInput
@@ -58,62 +80,47 @@ export default function LoginScreen() {
           placeholderTextColor="#777"
           secureTextEntry
           style={styles.input}
+          value={password}
+          onChangeText={setPassword}
         />
 
         <TouchableOpacity
           activeOpacity={0.85}
           style={styles.buttonContainer}
+          onPress={handleLogin}
+          disabled={loading}
         >
-
           <LinearGradient
-            colors={[
-              "#7C3AED",
-              "#9333EA",
-            ]}
+            colors={["#7C3AED", "#9333EA"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradient}
           >
-
-            <Text style={styles.buttonText}>
-              Login
-            </Text>
-
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Login</Text>
+            )}
           </LinearGradient>
-
         </TouchableOpacity>
 
-        <Text style={styles.or}>
-          OR
-        </Text>
+        <Text style={styles.or}>OR</Text>
 
         <TouchableOpacity
           style={styles.googleButton}
           onPress={handleGoogleSignIn}
+          disabled={loading}
         >
-
-          <AntDesign
-            name="google"
-            size={22}
-            color="#111"
-          />
-
-          <Text style={styles.googleText}>
-            Continue with Google
-          </Text>
-
+          <AntDesign name="google" size={22} color="#111" />
+          <Text style={styles.googleText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() =>
-            router.push("/signup")
-          }
+          onPress={() => router.push("/signup")}
         >
-
           <Text style={styles.loginTextBottom}>
-            Don’t have an account? Signup
+            Don't have an account? Signup
           </Text>
-
         </TouchableOpacity>
 
       </View>
@@ -125,7 +132,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
 
   logo: {
-    width: 250,
+    width: Platform.OS === "web" ? 200 : 250,
     height: 90,
     marginBottom: 20,
   },
@@ -144,7 +151,8 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: "88%",
+    width: Platform.OS === "web" ? "100%" : "88%",
+    maxWidth: 420,
     backgroundColor: "rgba(17,24,39,0.92)",
     borderRadius: 28,
     padding: 22,

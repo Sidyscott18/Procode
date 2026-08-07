@@ -13,7 +13,22 @@ import {
 import AuthBackground
 from "../components/AuthBackground";
 
+import { Alert, Platform } from "react-native";
+import { auth } from "../services/firebase";
+import { router } from "expo-router";
+
 export default function VerifyEmailScreen() {
+  const handleContinue = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    await user.reload();
+    if (user.emailVerified) {
+      router.replace("/username-setup");
+    } else {
+      Alert.alert("Not Verified", "Please verify your email first.");
+    }
+  };
+
   return (
 
     <AuthBackground>
@@ -53,6 +68,7 @@ export default function VerifyEmailScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           style={styles.buttonContainer}
+          onPress={handleContinue}
         >
 
           <LinearGradient
@@ -82,7 +98,7 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
 
   logo: {
-    width: 250,
+    width: Platform.OS === "web" ? 200 : 250,
     height: 90,
     marginBottom: 20,
   },
@@ -102,7 +118,8 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: "88%",
+    width: Platform.OS === "web" ? "100%" : "88%",
+    maxWidth: 420,
     backgroundColor: "rgba(17,24,39,0.92)",
     borderRadius: 28,
     padding: 22,
