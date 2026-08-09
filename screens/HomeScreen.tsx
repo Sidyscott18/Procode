@@ -20,7 +20,7 @@ import {
 
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, collection } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 import AuthBackground from "../components/AuthBackground";
 import { auth, db } from "../services/firebase";
@@ -876,24 +876,33 @@ export default function HomeScreen() {
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-    // Scan all game saves and find the most recently played one
-    import("firebase/firestore").then(({ getDoc, doc: fDoc }) => {
-      const checks = ALL_GAMES.map(game =>
-        getDoc(fDoc(db, "users", user.uid, "games", game.id))
-          .then(snap => ({
-            game,
-            lastPlayed: snap.exists() && snap.data()?.lastPlayed ? snap.data()!.lastPlayed as string : null,
-          }))
-          .catch(() => ({ game, lastPlayed: null }))
-      );
-      Promise.all(checks).then(results => {
-        const played = results.filter(r => r.lastPlayed !== null);
-        if (played.length === 0) { setLastPlayedGame(null); setHasPyroSave(false); return; }
-        played.sort((a, b) => (b.lastPlayed! > a.lastPlayed! ? 1 : -1));
-        const most = played[0];
-        setLastPlayedGame(most.game);
-        setHasPyroSave(true); // keep legacy flag in sync
+    
+    import("firebase/firestore").then(({ onSnapshot, collection }) => {
+      const gamesRef = collection(db, "users", user.uid, "games");
+      const unsubscribe = onSnapshot(gamesRef, (snap) => {
+        const played: { game: Game, lastPlayed: string }[] = [];
+        
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.lastPlayed) {
+            const game = ALL_GAMES.find(g => g.id === docSnap.id);
+            if (game) {
+              played.push({ game, lastPlayed: data.lastPlayed });
+            }
+          }
+        });
+        
+        if (played.length === 0) { 
+          setLastPlayedGame(null); 
+          setHasPyroSave(false); 
+        } else {
+          played.sort((a, b) => (b.lastPlayed > a.lastPlayed ? 1 : -1));
+          setLastPlayedGame(played[0].game);
+          setHasPyroSave(true);
+        }
       });
+      
+      return () => unsubscribe();
     });
   }, []);
 

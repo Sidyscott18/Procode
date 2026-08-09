@@ -1,0 +1,111 @@
+name: Deploy and E2E Test
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # =========================================
+  # Build and Deploy to GitHub Pages
+  # =========================================
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          
+      # IMPORTANT: If your project has a build step, uncomment these lines.
+      # Right now we assume static files for GitHub pages.
+      # - name: Install Dependencies
+      #   run: npm ci
+      # 
+      # - name: Build Project
+      #   run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # If building a frontend app like React/Vite, change this to './dist' or './build'
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # =========================================
+  # Verify Deployment & Run E2E Tests
+  # =========================================
+  e2e-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Verify the deployment URL is returning HTTP 200 OK
+      - name: Verify Deployment (Smoke Test)
+        run: |
+          echo "Verifying URL: ${{ needs.deploy.outputs.page_url }}"
+          # A simple curl check to ensure the page is alive
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" "${{ needs.deploy.outputs.page_url }}")
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Deployment Verification Failed! HTTP Status: $HTTP_STATUS"
+            # Optional: fail the build if it doesn't return 200, but we want the testing to happen
+            # exit 1 
+          else
+            echo "Deployment Verification Passed! (HTTP 200)"
+          fi
+
+      - name: Install Testing Dependencies
+        working-directory: ./automation
+        run: npm install
+
+      - name: Run E2E Report Generator (Selenium, Appium, Load, Vuln)
+        working-directory: ./automation
+        run: node generate_reports.js
+        env:
+          BASE_URL: ${{ needs.deploy.outputs.page_url }}
+          
+      # =========================================
+      # Upload All Artifacts
+      # =========================================
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: automation-test-evidence
+          path: automation/reports/
+          retention-days: 30

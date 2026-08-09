@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, collection, onSnapshot } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import AuthBackground from "../components/AuthBackground";
@@ -15,9 +15,9 @@ export default function ProfileScreen() {
   const [coins, setCoins] = useState(0);
   
   // Stats could be computed from games collection, but for now we'll mock or fetch basic ones
-  const [totalPlayTime] = useState("45h 12m");
-  const [gamesPlayed] = useState(12);
-  const [achievements] = useState(24);
+  const [totalPlayTime, setTotalPlayTime] = useState("0h 0m");
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [achievements, setAchievements] = useState(0);
   const [streak] = useState(7);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function ProfileScreen() {
     if (!user) return;
     
     const userRef = doc(db, "users", user.uid);
-    const unsubscribe = onSnapshot(userRef, (snap) => {
+    const unsubscribeUser = onSnapshot(userRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setDisplayName(data.displayName || "Coder");
@@ -35,7 +35,35 @@ export default function ProfileScreen() {
       }
     });
     
-    return () => unsubscribe();
+    const gamesRef = collection(db, "users", user.uid, "games");
+    const unsubscribeGames = onSnapshot(gamesRef, (snap) => {
+      let totalPlaySeconds = 0;
+      let totalAchievements = 0;
+      let totalGames = 0;
+      
+      snap.forEach((doc) => {
+        const data = doc.data();
+        totalGames++;
+        if (data.totalPlayTime) {
+          totalPlaySeconds += data.totalPlayTime;
+        }
+        if (data.achievements) {
+          totalAchievements += data.achievements.length;
+        }
+      });
+      
+      setGamesPlayed(totalGames);
+      setAchievements(totalAchievements);
+      
+      const hours = Math.floor(totalPlaySeconds / 3600);
+      const minutes = Math.floor((totalPlaySeconds % 3600) / 60);
+      setTotalPlayTime(`${hours}h ${minutes}m`);
+    });
+    
+    return () => {
+      unsubscribeUser();
+      unsubscribeGames();
+    };
   }, []);
 
   const handleLogout = async () => {
